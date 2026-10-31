@@ -28,7 +28,7 @@ def parse_auth_results(headers: Sequence[str]) -> AuthResults:
 
     Returns:
         The verdicts. A method that the header does not mention is UNKNOWN.
-        DKIM is PASS if any DKIM signature passed.
+        DKIM is PASSED if any DKIM signature passed.
     """
     if not headers:
         return AuthResults()
@@ -38,8 +38,8 @@ def parse_auth_results(headers: Sequence[str]) -> AuthResults:
 
     def pick(method: str) -> AuthVerdict:
         verdicts = found[method]
-        if AuthVerdict.PASS in verdicts:
-            return AuthVerdict.PASS
+        if AuthVerdict.PASSED in verdicts:
+            return AuthVerdict.PASSED
         return verdicts[0] if verdicts else AuthVerdict.UNKNOWN
 
     return AuthResults(spf=pick("spf"), dkim=pick("dkim"), dmarc=pick("dmarc"))

@@ -152,7 +152,9 @@ def build_server(services: Services) -> MCPServer:
 
     @server.tool(annotations=_READ)
     def get_message(
-        id: Annotated[int, Field(description="The id from search_mail.")],  # noqa: A002
+        message_ref: Annotated[
+            int, Field(description="The `id` of a result from search_mail.")
+        ],
         max_chars: Annotated[
             int, Field(ge=100, le=200_000, description="Cut the body at this length.")
         ] = 20_000,
@@ -160,7 +162,7 @@ def build_server(services: Services) -> MCPServer:
         """Read one message: headers, plain-text body and attachment list."""
 
         def run() -> MessageView:
-            message, state = services.read.get_message(id)
+            message, state = services.read.get_message(message_ref)
             return message_view(
                 message, state, services.clock.now(), Wrapper(), max_chars
             )
@@ -194,13 +196,15 @@ def build_server(services: Services) -> MCPServer:
 
     @server.tool(annotations=_WRITE_LOCAL)
     def download_attachment(
-        id: Annotated[int, Field(description="The message id.")],  # noqa: A002
+        message_ref: Annotated[
+            int, Field(description="The `id` of a result from search_mail.")
+        ],
         part: Annotated[str, Field(description="The attachment part, e.g. '2'.")],
     ) -> AttachmentSavedView:
         """Save one attachment to the download directory and return its path."""
 
         def run() -> AttachmentSavedView:
-            path, size = services.attachments.download(id, part)
+            path, size = services.attachments.download(message_ref, part)
             return AttachmentSavedView(path=str(path), size=size)
 
         return call(run)

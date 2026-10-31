@@ -99,13 +99,13 @@ Two secondary goals:
 | Tool | Parameters | Result |
 |---|---|---|
 | `search_mail` | `query?`, `folder?`, `from_address?`, `to_address?`, `since?`, `before?`, `unread?`, `flagged?`, `has_attachment?`, `limit=10`, `offset=0` | Ranked matches with snippets, and `total`. Without `query`, matches come newest first. |
-| `get_message` | `id`, `max_chars=20000` | Headers, plain-text body, attachment list, `truncated` |
+| `get_message` | `message_ref`, `max_chars=20000` | Headers, plain-text body, attachment list, `truncated` |
 | `list_folders` | none | Each folder with message count and unread count |
-| `download_attachment` | `id`, `part` | The path of the saved file |
+| `download_attachment` | `message_ref`, `part` | The path of the saved file |
 | `create_draft` | `to`, `subject`, `body` (Markdown), `cc?`, `bcc?`, `in_reply_to?` | The draft's `Message-ID`, folder and `new_recipients`. The body becomes a `multipart/alternative` message: the Markdown source as `text/plain`, and HTML from CommonMark with raw HTML off and images rendered as links. |
 | `sync_now` | `folder?` | Sync result |
 
-Every result includes a `sync` object. The server marks `search_mail`, `get_message`, `list_folders` and `sync_now` with the MCP annotation `readOnlyHint: true`. `download_attachment` and `create_draft` write (a local file and a draft), so they carry `readOnlyHint: false` and `destructiveHint: false`. The `id` value is a local message ID. It stays valid until the index is rebuilt. Each result also carries the stable `message_id` header.
+Every result includes a `sync` object. The server marks `search_mail`, `get_message`, `list_folders` and `sync_now` with the MCP annotation `readOnlyHint: true`. `download_attachment` and `create_draft` write (a local file and a draft), so they carry `readOnlyHint: false` and `destructiveHint: false`. The `id` value in a result is a local message ID, which `get_message`, `download_attachment` and `create_draft` take as `message_ref` or `in_reply_to`. It stays valid until the index is rebuilt. Each result also carries the stable `message_id` header.
 
 By default, `search_mail` skips the Junk and Trash folders (`\Junk` and `\Trash` by `SPECIAL-USE`, or `Junk` and `Deleted Messages` by name). If the agent names one of them in `folder`, the search covers it.
 

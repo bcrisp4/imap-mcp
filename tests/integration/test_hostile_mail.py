@@ -80,7 +80,7 @@ async def test_hostile_text_stays_untrusted_and_contained(
 
     found = await call(server, "search_mail", query="newsletter")
     (hit,) = found["results"]
-    message = await call(server, "get_message", id=hit["id"])
+    message = await call(server, "get_message", message_ref=hit["id"])
 
     for result in (found, message):
         assert not any(MARK in s for s in trusted_strings(result)), case
@@ -97,7 +97,7 @@ async def test_hidden_html_is_gone_and_flagged(
     imap_server.add_message("INBOX", make_message(**HOSTILE["hidden-div"]))
 
     (hit,) = (await call(server, "search_mail", query="newsletter"))["results"]
-    message = await call(server, "get_message", id=hit["id"])
+    message = await call(server, "get_message", message_ref=hit["id"])
 
     assert hit["hidden_content_removed"] is True
     assert MARK not in str(message)

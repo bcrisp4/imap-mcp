@@ -40,7 +40,7 @@ class ParseState(StrEnum):
 class AuthVerdict(StrEnum):
     """One result from an `Authentication-Results` header (RFC 8601)."""
 
-    PASS = "pass"  # noqa: S105 - a verdict name, not a password
+    PASSED = "pass"
     FAIL = "fail"
     SOFTFAIL = "softfail"
     NEUTRAL = "neutral"

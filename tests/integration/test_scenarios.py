@@ -42,7 +42,7 @@ class TestS1FindAFact:
 
         found = await call(server, "search_mail", query="car insurance renewal")
         top = found["results"][0]
-        message = await call(server, "get_message", id=top["id"])
+        message = await call(server, "get_message", message_ref=top["id"])
 
         assert found["sync"]["state"] == "complete"
         assert found["total"] == 1
@@ -158,8 +158,12 @@ class TestS5SaveAnAttachment:
         hit = found["results"][0]
         part = hit["attachments"][0]["part"]
 
-        first = await call(server, "download_attachment", id=hit["id"], part=part)
-        second = await call(server, "download_attachment", id=hit["id"], part=part)
+        first = await call(
+            server, "download_attachment", message_ref=hit["id"], part=part
+        )
+        second = await call(
+            server, "download_attachment", message_ref=hit["id"], part=part
+        )
 
         downloads = tmp_path / "Downloads"
         assert first["path"] == str(downloads / "acme-invoice-2026-10.pdf")
@@ -175,7 +179,7 @@ class TestS5SaveAnAttachment:
         found = await call(server, "search_mail", query="evil")
         hit = found["results"][0]
 
-        saved = await call(server, "download_attachment", id=hit["id"],
+        saved = await call(server, "download_attachment", message_ref=hit["id"],
                            part=hit["attachments"][0]["part"])  # fmt: skip
 
         assert saved["path"] == str(tmp_path / "Downloads" / "zshrc")
