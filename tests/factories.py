@@ -7,6 +7,9 @@ from email.message import EmailMessage
 from email.utils import format_datetime
 from typing import Any
 
+from imap_mcp.domain.content.parse import parse_message
+from imap_mcp.domain.model import FetchedHeader, ParsedMessage
+
 _counter = iter(range(1, 1_000_000))
 
 
@@ -64,3 +67,18 @@ def make_message(
         maintype, subtype = content_type.split("/")
         msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
     return msg.as_bytes(policy=msg.policy.clone(linesep="\r\n"))
+
+
+def make_parsed(**options: Any) -> ParsedMessage:
+    """Build a ParsedMessage by parsing `make_message(**options)`."""
+    raw = make_message(**options)
+    header = raw.split(b"\r\n\r\n", 1)[0] + b"\r\n\r\n"
+    fetched = FetchedHeader(
+        uid=1,
+        flags=frozenset(),
+        internal_date=datetime(2026, 1, 1, tzinfo=UTC),
+        size=len(raw),
+        header=header,
+        structure=None,
+    )
+    return parse_message(fetched, None, whole=raw)

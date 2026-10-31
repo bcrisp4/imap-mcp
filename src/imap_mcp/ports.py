@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         Folder,
         FolderStatus,
         FolderSummary,
+        IndexStats,
         ParsedMessage,
         SearchPage,
         SearchQuery,
@@ -244,4 +245,12 @@ class Index(Protocol):
 
     def maintain(self, deadline: float, clock: Clock) -> int:
         """Free unused pages until `deadline` (monotonic). Return pages freed."""
+        ...
+
+    def stats(self) -> IndexStats:
+        """Return size figures."""
+        ...
+
+    def vacuum(self) -> None:
+        """Rebuild the file and merge the full-text index."""
         ...

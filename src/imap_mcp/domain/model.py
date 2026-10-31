@@ -318,3 +318,18 @@ class DraftResult:
     message_id: str
     folder: str
     new_recipients: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class IndexStats:
+    """Size figures for `imap-mcp status`.
+
+    Attributes:
+        messages: Messages in the index.
+        file_bytes: The database file size.
+        free_bytes: Bytes in free pages.
+    """
+
+    messages: int
+    file_bytes: int
+    free_bytes: int
