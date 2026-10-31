@@ -2,6 +2,18 @@
 
 imap-mcp is a local, read-only MCP server for one IMAP mailbox, with a SQLite keyword index. The design doc is the source of truth: [docs/designs/imap-mcp.md](docs/designs/imap-mcp.md).
 
+## Usage
+
+| Task | Command |
+|---|---|
+| Install the dev environment | `uv sync` |
+| Run the server from this checkout | `uv run imap-mcp serve` (stdio, for an MCP client) |
+| Store the password, check the server, sync | `uv run imap-mcp set-password`, `uv run imap-mcp probe`, `uv run imap-mcp sync` |
+| Show the index state | `uv run imap-mcp status` |
+| Point at another config | `IMAP_MCP_CONFIG=/path/config.toml uv run imap-mcp ...` |
+
+The config, tools and commands are in [README.md](README.md). Agents must not run `set-password`, `probe` or `sync` against a real mailbox unless the user asks, because they read private mail.
+
 ## Layout (ports and adapters)
 
 | Path | Holds | May import |
@@ -44,7 +56,8 @@ imap-mcp is a local, read-only MCP server for one IMAP mailbox, with a SQLite ke
 | A docstring | `uv run pdoc imap_mcp -o docs/api --docformat google` |
 | A dependency | `uv run --no-dev python scripts/check_licenses.py` |
 | The design doc | Update its "Updated" date. Move a decided open issue to "Closed issues". |
-| A release | Set `version` in `pyproject.toml`, then publish a GitHub release tagged `v<version>`. `release.yml` refuses a tag that does not match. |
+| A user-visible change | Add a line under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog 1.1.0) |
+| A release | Follow [docs/releasing.md](docs/releasing.md). `release.yml` refuses a tag that does not match the package version or has no dated changelog section. |
 
 ## Worktrees
 

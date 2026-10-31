@@ -1,10 +1,15 @@
 name: Release
 
-# Publishes to PyPI with trusted publishing (OIDC). No API token exists.
-# PyPI accepts uploads only from this workflow and the `pypi` environment.
+# A pushed tag vMAJOR.MINOR.PATCH runs CI, checks the tag against the package
+# version and the changelog, publishes to PyPI, then creates the GitHub release
+# with the changelog section as its notes and the built files attached.
+#
+# PyPI upload uses trusted publishing (OIDC). No API token exists. PyPI accepts
+# uploads only from this workflow file and the `pypi` environment.
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: read
@@ -21,15 +26,21 @@ jobs:
       - uses: astral-sh/setup-uv@v10
       - name: Check the tag matches the package version
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.ref_name }}
         run: test "v$(uv version --short)" = "$TAG"
+      - name: Extract the release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: python3 scripts/changelog_section.py "$TAG" > release-notes.md
       - run: uv build
       - uses: actions/upload-artifact@v7
         with:
-          name: dist
-          path: dist/
+          name: release
+          path: |
+            dist/
+            release-notes.md
 
-  publish:
+  publish-pypi:
     needs: build
     runs-on: ubuntu-latest
     environment: pypi
@@ -38,6 +49,25 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: dist
-          path: dist/
+          name: release
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: >
+          gh release create "$TAG" dist/*
+          --repo "$GITHUB_REPOSITORY"
+          --title "$TAG"
+          --notes-file release-notes.md
+          --verify-tag
