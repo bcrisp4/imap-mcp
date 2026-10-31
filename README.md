@@ -10,7 +10,7 @@ It syncs the mailbox into a local SQLite index with ranked keyword search (FTS5)
 - It never deletes, moves or flags mail. A read never marks a message as read. A command allowlist checks every IMAP command before it goes on the wire.
 - It never listens on the network. It runs on stdio, started by your agent.
 
-Email is untrusted input. Results keep sender text apart from server data, remove hidden HTML and invisible Unicode, and show sender authentication results. See [Security](docs/designs/imap-mcp.md#security) in the design doc.
+Email is untrusted input. Results keep sender text apart from server data, remove hidden HTML and invisible Unicode, and show sender authentication results. See [Security](https://github.com/bcrisp4/imap-mcp/blob/main/docs/designs/imap-mcp.md#security) in the design doc.
 
 ## Requirements
 
@@ -137,13 +137,13 @@ uv sync
 uv run ruff check && uv run ruff format --check && uv run pyright && uv run mypy && uv run pytest
 ```
 
-Tests never connect to a real mailbox. They use a TLS fake IMAP server that records every command and reproduces the iCloud quirks. Read [AGENTS.md](AGENTS.md) before you change code.
+Tests never connect to a real mailbox. They use a TLS fake IMAP server that records every command and reproduces the iCloud quirks. Read [AGENTS.md](https://github.com/bcrisp4/imap-mcp/blob/main/AGENTS.md) before you change code.
 
 ## Docs
 
-- [Design](docs/designs/imap-mcp.md): goals, security model, sync design and decisions
-- [API reference](docs/api/index.html): generated from the docstrings with `pdoc`
+- [Design](https://github.com/bcrisp4/imap-mcp/blob/main/docs/designs/imap-mcp.md): goals, security model, sync design and decisions
+- API reference: run `uv run pdoc imap_mcp` for a local browser view, or open `docs/api/index.html` in a clone
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/bcrisp4/imap-mcp/blob/main/LICENSE).

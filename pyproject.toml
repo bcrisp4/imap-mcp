@@ -6,6 +6,16 @@ readme = "README.md"
 license = "MIT"
 authors = [{ name = "Ben Crisp", email = "ben@thecrisp.io" }]
 requires-python = ">=3.14"
+keywords = ["mcp", "imap", "email", "icloud", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Communications :: Email :: Post-Office :: IMAP",
+]
 dependencies = [
     "beautifulsoup4>=4.15",
     "imapclient>=4.1",
@@ -16,12 +26,23 @@ dependencies = [
     "structlog>=26.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/bcrisp4/imap-mcp"
+Source = "https://github.com/bcrisp4/imap-mcp"
+Issues = "https://github.com/bcrisp4/imap-mcp/issues"
+Design = "https://github.com/bcrisp4/imap-mcp/blob/main/docs/designs/imap-mcp.md"
+
 [project.scripts]
 imap-mcp = "imap_mcp.entrypoints.cli:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# The sdist holds only what a rebuild and the tests need. Agent skills, CI
+# files and generated API docs stay out.
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "tests", "scripts", "README.md", "LICENSE", "uv.lock"]
 
 [dependency-groups]
 dev = [

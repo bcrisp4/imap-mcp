@@ -44,6 +44,7 @@ imap-mcp is a local, read-only MCP server for one IMAP mailbox, with a SQLite ke
 | A docstring | `uv run pdoc imap_mcp -o docs/api --docformat google` |
 | A dependency | `uv run --no-dev python scripts/check_licenses.py` |
 | The design doc | Update its "Updated" date. Move a decided open issue to "Closed issues". |
+| A release | Set `version` in `pyproject.toml`, then publish a GitHub release tagged `v<version>`. `release.yml` refuses a tag that does not match. |
 
 ## Worktrees
 
