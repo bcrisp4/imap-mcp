@@ -114,6 +114,7 @@ class TestS4DraftAReply:
         )  # fmt: skip
 
         (stored,) = imap_server.mailboxes["Drafts"].messages
+        assert b"\n" not in stored.raw.replace(b"\r\n", b"")
         raw = stored.raw.decode()
         assert "\\Draft" in stored.flags
         assert draft["folder"] == "Drafts"

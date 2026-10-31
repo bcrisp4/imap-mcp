@@ -18,7 +18,7 @@ import structlog
 
 from imap_mcp.domain.content.parse import MAX_TEXT_BYTES, header_identity, parse_message
 from imap_mcp.domain.enums import FolderRole, SyncStateKind
-from imap_mcp.domain.errors import CredentialError, MailError
+from imap_mcp.domain.errors import CredentialError, MailError, NotFoundError
 from imap_mcp.domain.model import SyncReport, SyncState
 
 if TYPE_CHECKING:
@@ -61,6 +61,7 @@ class _Run:
     removed: int = 0
     flags_updated: int = 0
     remaining: int = 0
+    unvisited: bool = False
     interrupted: bool = False
     folders: list[str] = field(default_factory=list[str])
 
@@ -160,6 +161,7 @@ class SyncService:
             finally:
                 self._lock.release()
         if self._lock.acquire(self._budget):
+            # Another process finished its sync while this one waited.
             self._lock.release()
             state = self._index.sync_state()
             return SyncReport(
@@ -199,6 +201,8 @@ class SyncService:
                 self._sync_folders(source, run, only_folder)
         except (MailError, CredentialError) as exc:
             log.error("sync_failed", error=str(exc))
+            if only_folder is not None:
+                return SyncReport(kind=SyncStateKind.FAILED, error=str(exc))
             self._index.save_sync_state(
                 replace(previous, last_attempt=started, kind=SyncStateKind.FAILED,
                         error=str(exc))
@@ -206,19 +210,25 @@ class SyncService:
             return SyncReport(kind=SyncStateKind.FAILED, error=str(exc))
 
         complete = not run.interrupted
-        if complete and only_folder is None:
-            self._index.delete_orphans()
-            self._index.maintain(deadline, self._clock)
         kind = SyncStateKind.COMPLETE if complete else SyncStateKind.PARTIAL
-        self._index.save_sync_state(
-            SyncState(
-                last_success=self._clock.now() if complete else previous.last_success,
-                last_attempt=started,
-                kind=kind,
-                error=None,
-                remaining=run.remaining,
+        remaining = None if run.unvisited else run.remaining
+        # A single-folder sync says nothing about the other folders, so it
+        # leaves the shared freshness state alone.
+        if only_folder is None:
+            if complete:
+                self._index.delete_orphans()
+                self._index.maintain(deadline, self._clock)
+            self._index.save_sync_state(
+                SyncState(
+                    last_success=self._clock.now()
+                    if complete
+                    else previous.last_success,
+                    last_attempt=started,
+                    kind=kind,
+                    error=None,
+                    remaining=remaining,
+                )
             )
-        )
         log.info(
             "sync_finished", kind=kind.value, new=run.new_messages, linked=run.linked,
             removed=run.removed, flags=run.flags_updated, remaining=run.remaining,
@@ -229,7 +239,7 @@ class SyncService:
             linked=run.linked,
             removed=run.removed,
             flags_updated=run.flags_updated,
-            remaining=run.remaining,
+            remaining=remaining,
             folders=tuple(run.folders),
         )
 
@@ -241,15 +251,20 @@ class SyncService:
             self._index.remove_folders_except([f.name for f in folders])
         else:
             folders = [f for f in folders if f.name == only_folder]
+            if not folders:
+                msg = f"No folder named {only_folder!r}. Call list_folders for names."
+                raise NotFoundError(msg)
         folders.sort(key=lambda f: (_ROLE_ORDER[f.role], f.name.casefold()))
         condstore = "CONDSTORE" in source.capabilities()
-        for folder in folders:
+        for position, folder in enumerate(folders):
             if self._clock.monotonic() >= run.deadline:
                 run.interrupted = True
+                run.unvisited = True
                 return
             self._sync_folder(source, folder, run, condstore=condstore,
                               force_flags=only_folder is not None)  # fmt: skip
             if run.interrupted:
+                run.unvisited = position < len(folders) - 1
                 return
 
     def _sync_folder(
@@ -278,7 +293,13 @@ class SyncService:
         run.removed += self._index.remove_locations(name, gone)
         kept = local_uids - gone
 
-        if kept and stored is not None:
+        if kept and stored is None:
+            # An earlier run fetched these but never finished the folder, so
+            # no stored modseq covers changes made since. Fetch every flag.
+            run.flags_updated += self._index.update_flags(
+                name, source.fetch_flags(kept)
+            )
+        elif kept and stored is not None:
             run.flags_updated += self._refresh_flags(
                 source, name, kept, status, stored, condstore=condstore,
                 force=force_flags,

@@ -156,7 +156,9 @@ class DraftService:
             if not folder:
                 msg = "No Drafts folder found. Set drafts_folder in the config file."
                 raise InvalidRequestError(msg)
-            source.append_draft(folder, message.as_bytes())
+            # IMAP and RFC 5322 need CRLF line ends. The default policy uses LF.
+            raw = message.as_bytes(policy=message.policy.clone(linesep="\r\n"))
+            source.append_draft(folder, raw)
 
         known = self._index.known_addresses([parseaddr(r)[1] for r in recipients])
         new = tuple(

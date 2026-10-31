@@ -122,6 +122,7 @@ Sample `search_mail` result:
       "id": 18234,
       "folders": ["Archive"],
       "date": "2026-02-14T09:12:00Z",
+      "to_count": 1,
       "unread": false,
       "flagged": false,
       "auth": {"spf": "pass", "dkim": "pass", "dmarc": "pass"},
@@ -142,7 +143,7 @@ Sample `search_mail` result:
 }
 ```
 
-`sync.state` is one of `complete`, `partial`, `in_progress_elsewhere` or `failed`.
+`sync.state` is one of `complete`, `partial`, `in_progress_elsewhere` or `failed`. `sync.remaining` is null when a partial sync left folders unvisited. Recipient lists show at most 20 addresses, and `to_count` gives the full number. `sync_now(folder)` syncs one folder and leaves the shared freshness state unchanged.
 
 ### Config file
 

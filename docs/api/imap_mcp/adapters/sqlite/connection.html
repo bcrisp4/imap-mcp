@@ -37,6 +37,9 @@
                     <a class="function" href="#has_other_connections">has_other_connections</a>
             </li>
             <li>
+                    <a class="function" href="#read_transaction">read_transaction</a>
+            </li>
+            <li>
                     <a class="function" href="#write_transaction">write_transaction</a>
             </li>
     </ul>
@@ -134,46 +137,70 @@
 </span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>
 </span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a><span class="sd">    Leaving WAL mode needs the only connection to the file, so a refused switch</span>
 </span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a><span class="sd">    means another process (an idle MCP server, for example) still has it open.</span>
-</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>
-</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a><span class="sd">    Args:</span>
-</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a><span class="sd">        path: The database file.</span>
-</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>
-</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a><span class="sd">    Returns:</span>
-</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a><span class="sd">        True if another connection holds the file open.</span>
-</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a><span class="sd">    """</span>
-</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>        <span class="k">return</span> <span class="kc">False</span>
-</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">autocommit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>        <span class="n">mode</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA journal_mode = DELETE"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>    <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">OperationalError</span><span class="p">:</span>
-</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>        <span class="k">return</span> <span class="kc">True</span>
-</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>    <span class="k">finally</span><span class="p">:</span>
-</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">"delete"</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>
-</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>
-</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
-</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">]:</span>
-</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a><span class="w">    </span><span class="sd">"""Run a block in one `BEGIN IMMEDIATE` transaction.</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a><span class="sd">    A switch that succeeds is undone at once, so the file stays in WAL mode.</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a><span class="sd">    Args:</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a><span class="sd">        path: The database file.</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>
+</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a><span class="sd">    Returns:</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a><span class="sd">        True if another connection holds the file open.</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a><span class="sd">    """</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>        <span class="k">return</span> <span class="kc">False</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">autocommit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>        <span class="n">mode</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA journal_mode = DELETE"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"delete"</span><span class="p">:</span>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA journal_mode = WAL"</span><span class="p">)</span>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>            <span class="k">return</span> <span class="kc">False</span>
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>    <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">OperationalError</span><span class="p">:</span>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>        <span class="k">return</span> <span class="kc">True</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>    <span class="k">finally</span><span class="p">:</span>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>    <span class="k">return</span> <span class="kc">True</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>
 </span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>
-</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a><span class="sd">    `IMMEDIATE` takes the write lock up front, so `busy_timeout` governs the</span>
-</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a><span class="sd">    wait. A deferred transaction that reads first and then writes can fail with</span>
-</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a><span class="sd">    a busy error that the timeout cannot retry.</span>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">]:</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a><span class="w">    </span><span class="sd">"""Run several reads against one snapshot of the database.</span>
 </span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>
-</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a><span class="sd">    Args:</span>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a><span class="sd">    In WAL mode, each autocommit statement can see a different commit. A</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="sd">    deferred transaction pins one snapshot for every read inside it.</span>
 </span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>
-</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a><span class="sd">    Yields:</span>
-</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a><span class="sd">        The same connection.</span>
-</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a><span class="sd">    """</span>
-</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"BEGIN IMMEDIATE"</span><span class="p">)</span>
-</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>        <span class="k">yield</span> <span class="n">conn</span>
-</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
-</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"ROLLBACK"</span><span class="p">)</span>
-</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>        <span class="k">raise</span>
-</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"COMMIT"</span><span class="p">)</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a><span class="sd">    Args:</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a><span class="sd">    Yields:</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a><span class="sd">        The same connection.</span>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a><span class="sd">    """</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"BEGIN"</span><span class="p">)</span>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>        <span class="k">yield</span> <span class="n">conn</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>    <span class="k">finally</span><span class="p">:</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"COMMIT"</span><span class="p">)</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">]:</span>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a><span class="w">    </span><span class="sd">"""Run a block in one `BEGIN IMMEDIATE` transaction.</span>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a><span class="sd">    `IMMEDIATE` takes the write lock up front, so `busy_timeout` governs the</span>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="sd">    wait. A deferred transaction that reads first and then writes can fail with</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="sd">    a busy error that the timeout cannot retry.</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">    Args:</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="sd">    Yields:</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="sd">        The same connection.</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a><span class="sd">    """</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"BEGIN IMMEDIATE"</span><span class="p">)</span>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>        <span class="k">yield</span> <span class="n">conn</span>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"ROLLBACK"</span><span class="p">)</span>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>        <span class="k">raise</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"COMMIT"</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -264,30 +291,35 @@ index holds the text of private mail.</p>
 </span><span id="has_other_connections-71"><a href="#has_other_connections-71"><span class="linenos">71</span></a>
 </span><span id="has_other_connections-72"><a href="#has_other_connections-72"><span class="linenos">72</span></a><span class="sd">    Leaving WAL mode needs the only connection to the file, so a refused switch</span>
 </span><span id="has_other_connections-73"><a href="#has_other_connections-73"><span class="linenos">73</span></a><span class="sd">    means another process (an idle MCP server, for example) still has it open.</span>
-</span><span id="has_other_connections-74"><a href="#has_other_connections-74"><span class="linenos">74</span></a>
-</span><span id="has_other_connections-75"><a href="#has_other_connections-75"><span class="linenos">75</span></a><span class="sd">    Args:</span>
-</span><span id="has_other_connections-76"><a href="#has_other_connections-76"><span class="linenos">76</span></a><span class="sd">        path: The database file.</span>
-</span><span id="has_other_connections-77"><a href="#has_other_connections-77"><span class="linenos">77</span></a>
-</span><span id="has_other_connections-78"><a href="#has_other_connections-78"><span class="linenos">78</span></a><span class="sd">    Returns:</span>
-</span><span id="has_other_connections-79"><a href="#has_other_connections-79"><span class="linenos">79</span></a><span class="sd">        True if another connection holds the file open.</span>
-</span><span id="has_other_connections-80"><a href="#has_other_connections-80"><span class="linenos">80</span></a><span class="sd">    """</span>
-</span><span id="has_other_connections-81"><a href="#has_other_connections-81"><span class="linenos">81</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="has_other_connections-82"><a href="#has_other_connections-82"><span class="linenos">82</span></a>        <span class="k">return</span> <span class="kc">False</span>
-</span><span id="has_other_connections-83"><a href="#has_other_connections-83"><span class="linenos">83</span></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">autocommit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="has_other_connections-84"><a href="#has_other_connections-84"><span class="linenos">84</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="has_other_connections-85"><a href="#has_other_connections-85"><span class="linenos">85</span></a>        <span class="n">mode</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA journal_mode = DELETE"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="has_other_connections-86"><a href="#has_other_connections-86"><span class="linenos">86</span></a>    <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">OperationalError</span><span class="p">:</span>
-</span><span id="has_other_connections-87"><a href="#has_other_connections-87"><span class="linenos">87</span></a>        <span class="k">return</span> <span class="kc">True</span>
-</span><span id="has_other_connections-88"><a href="#has_other_connections-88"><span class="linenos">88</span></a>    <span class="k">finally</span><span class="p">:</span>
-</span><span id="has_other_connections-89"><a href="#has_other_connections-89"><span class="linenos">89</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="has_other_connections-90"><a href="#has_other_connections-90"><span class="linenos">90</span></a>    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="s2">"delete"</span>
+</span><span id="has_other_connections-74"><a href="#has_other_connections-74"><span class="linenos">74</span></a><span class="sd">    A switch that succeeds is undone at once, so the file stays in WAL mode.</span>
+</span><span id="has_other_connections-75"><a href="#has_other_connections-75"><span class="linenos">75</span></a>
+</span><span id="has_other_connections-76"><a href="#has_other_connections-76"><span class="linenos">76</span></a><span class="sd">    Args:</span>
+</span><span id="has_other_connections-77"><a href="#has_other_connections-77"><span class="linenos">77</span></a><span class="sd">        path: The database file.</span>
+</span><span id="has_other_connections-78"><a href="#has_other_connections-78"><span class="linenos">78</span></a>
+</span><span id="has_other_connections-79"><a href="#has_other_connections-79"><span class="linenos">79</span></a><span class="sd">    Returns:</span>
+</span><span id="has_other_connections-80"><a href="#has_other_connections-80"><span class="linenos">80</span></a><span class="sd">        True if another connection holds the file open.</span>
+</span><span id="has_other_connections-81"><a href="#has_other_connections-81"><span class="linenos">81</span></a><span class="sd">    """</span>
+</span><span id="has_other_connections-82"><a href="#has_other_connections-82"><span class="linenos">82</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="has_other_connections-83"><a href="#has_other_connections-83"><span class="linenos">83</span></a>        <span class="k">return</span> <span class="kc">False</span>
+</span><span id="has_other_connections-84"><a href="#has_other_connections-84"><span class="linenos">84</span></a>    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">autocommit</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="has_other_connections-85"><a href="#has_other_connections-85"><span class="linenos">85</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="has_other_connections-86"><a href="#has_other_connections-86"><span class="linenos">86</span></a>        <span class="n">mode</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA journal_mode = DELETE"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="has_other_connections-87"><a href="#has_other_connections-87"><span class="linenos">87</span></a>        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"delete"</span><span class="p">:</span>
+</span><span id="has_other_connections-88"><a href="#has_other_connections-88"><span class="linenos">88</span></a>            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA journal_mode = WAL"</span><span class="p">)</span>
+</span><span id="has_other_connections-89"><a href="#has_other_connections-89"><span class="linenos">89</span></a>            <span class="k">return</span> <span class="kc">False</span>
+</span><span id="has_other_connections-90"><a href="#has_other_connections-90"><span class="linenos">90</span></a>    <span class="k">except</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">OperationalError</span><span class="p">:</span>
+</span><span id="has_other_connections-91"><a href="#has_other_connections-91"><span class="linenos">91</span></a>        <span class="k">return</span> <span class="kc">True</span>
+</span><span id="has_other_connections-92"><a href="#has_other_connections-92"><span class="linenos">92</span></a>    <span class="k">finally</span><span class="p">:</span>
+</span><span id="has_other_connections-93"><a href="#has_other_connections-93"><span class="linenos">93</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="has_other_connections-94"><a href="#has_other_connections-94"><span class="linenos">94</span></a>    <span class="k">return</span> <span class="kc">True</span>
 </span></pre></div>
 
 
             <div class="docstring"><p>Return True if another connection has the database open.</p>
 
 <p>Leaving WAL mode needs the only connection to the file, so a refused switch
-means another process (an idle MCP server, for example) still has it open.</p>
+means another process (an idle MCP server, for example) still has it open.
+A switch that succeeds is undone at once, so the file stays in WAL mode.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
@@ -299,6 +331,59 @@ means another process (an idle MCP server, for example) still has it open.</p>
 
 <blockquote>
   <p>True if another connection holds the file open.</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="read_transaction">
+                            <input id="read_transaction-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+                    <div class="decorator decorator-contextlib.contextmanager">@contextlib.contextmanager</div>
+
+        <span class="def">def</span>
+        <span class="name">read_transaction</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span></span><span class="return-annotation">) -> <span class="n">Generator</span><span class="p">[</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">]</span>:</span></span>
+
+                <label class="view-source-button" for="read_transaction-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#read_transaction"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="read_transaction-97"><a href="#read_transaction-97"><span class="linenos"> 97</span></a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+</span><span id="read_transaction-98"><a href="#read_transaction-98"><span class="linenos"> 98</span></a><span class="k">def</span><span class="w"> </span><span class="nf">read_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">]:</span>
+</span><span id="read_transaction-99"><a href="#read_transaction-99"><span class="linenos"> 99</span></a><span class="w">    </span><span class="sd">"""Run several reads against one snapshot of the database.</span>
+</span><span id="read_transaction-100"><a href="#read_transaction-100"><span class="linenos">100</span></a>
+</span><span id="read_transaction-101"><a href="#read_transaction-101"><span class="linenos">101</span></a><span class="sd">    In WAL mode, each autocommit statement can see a different commit. A</span>
+</span><span id="read_transaction-102"><a href="#read_transaction-102"><span class="linenos">102</span></a><span class="sd">    deferred transaction pins one snapshot for every read inside it.</span>
+</span><span id="read_transaction-103"><a href="#read_transaction-103"><span class="linenos">103</span></a>
+</span><span id="read_transaction-104"><a href="#read_transaction-104"><span class="linenos">104</span></a><span class="sd">    Args:</span>
+</span><span id="read_transaction-105"><a href="#read_transaction-105"><span class="linenos">105</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="read_transaction-106"><a href="#read_transaction-106"><span class="linenos">106</span></a>
+</span><span id="read_transaction-107"><a href="#read_transaction-107"><span class="linenos">107</span></a><span class="sd">    Yields:</span>
+</span><span id="read_transaction-108"><a href="#read_transaction-108"><span class="linenos">108</span></a><span class="sd">        The same connection.</span>
+</span><span id="read_transaction-109"><a href="#read_transaction-109"><span class="linenos">109</span></a><span class="sd">    """</span>
+</span><span id="read_transaction-110"><a href="#read_transaction-110"><span class="linenos">110</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"BEGIN"</span><span class="p">)</span>
+</span><span id="read_transaction-111"><a href="#read_transaction-111"><span class="linenos">111</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="read_transaction-112"><a href="#read_transaction-112"><span class="linenos">112</span></a>        <span class="k">yield</span> <span class="n">conn</span>
+</span><span id="read_transaction-113"><a href="#read_transaction-113"><span class="linenos">113</span></a>    <span class="k">finally</span><span class="p">:</span>
+</span><span id="read_transaction-114"><a href="#read_transaction-114"><span class="linenos">114</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"COMMIT"</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Run several reads against one snapshot of the database.</p>
+
+<p>In WAL mode, each autocommit statement can see a different commit. A
+deferred transaction pins one snapshot for every read inside it.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>conn:</strong>  An autocommit connection.</li>
+</ul>
+
+<h6 id="yields">Yields:</h6>
+
+<blockquote>
+  <p>The same connection.</p>
 </blockquote>
 </div>
 
@@ -316,27 +401,27 @@ means another process (an idle MCP server, for example) still has it open.</p>
 
     </div>
     <a class="headerlink" href="#write_transaction"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="write_transaction-93"><a href="#write_transaction-93"><span class="linenos"> 93</span></a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
-</span><span id="write_transaction-94"><a href="#write_transaction-94"><span class="linenos"> 94</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">]:</span>
-</span><span id="write_transaction-95"><a href="#write_transaction-95"><span class="linenos"> 95</span></a><span class="w">    </span><span class="sd">"""Run a block in one `BEGIN IMMEDIATE` transaction.</span>
-</span><span id="write_transaction-96"><a href="#write_transaction-96"><span class="linenos"> 96</span></a>
-</span><span id="write_transaction-97"><a href="#write_transaction-97"><span class="linenos"> 97</span></a><span class="sd">    `IMMEDIATE` takes the write lock up front, so `busy_timeout` governs the</span>
-</span><span id="write_transaction-98"><a href="#write_transaction-98"><span class="linenos"> 98</span></a><span class="sd">    wait. A deferred transaction that reads first and then writes can fail with</span>
-</span><span id="write_transaction-99"><a href="#write_transaction-99"><span class="linenos"> 99</span></a><span class="sd">    a busy error that the timeout cannot retry.</span>
-</span><span id="write_transaction-100"><a href="#write_transaction-100"><span class="linenos">100</span></a>
-</span><span id="write_transaction-101"><a href="#write_transaction-101"><span class="linenos">101</span></a><span class="sd">    Args:</span>
-</span><span id="write_transaction-102"><a href="#write_transaction-102"><span class="linenos">102</span></a><span class="sd">        conn: An autocommit connection.</span>
-</span><span id="write_transaction-103"><a href="#write_transaction-103"><span class="linenos">103</span></a>
-</span><span id="write_transaction-104"><a href="#write_transaction-104"><span class="linenos">104</span></a><span class="sd">    Yields:</span>
-</span><span id="write_transaction-105"><a href="#write_transaction-105"><span class="linenos">105</span></a><span class="sd">        The same connection.</span>
-</span><span id="write_transaction-106"><a href="#write_transaction-106"><span class="linenos">106</span></a><span class="sd">    """</span>
-</span><span id="write_transaction-107"><a href="#write_transaction-107"><span class="linenos">107</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"BEGIN IMMEDIATE"</span><span class="p">)</span>
-</span><span id="write_transaction-108"><a href="#write_transaction-108"><span class="linenos">108</span></a>    <span class="k">try</span><span class="p">:</span>
-</span><span id="write_transaction-109"><a href="#write_transaction-109"><span class="linenos">109</span></a>        <span class="k">yield</span> <span class="n">conn</span>
-</span><span id="write_transaction-110"><a href="#write_transaction-110"><span class="linenos">110</span></a>    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
-</span><span id="write_transaction-111"><a href="#write_transaction-111"><span class="linenos">111</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"ROLLBACK"</span><span class="p">)</span>
-</span><span id="write_transaction-112"><a href="#write_transaction-112"><span class="linenos">112</span></a>        <span class="k">raise</span>
-</span><span id="write_transaction-113"><a href="#write_transaction-113"><span class="linenos">113</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"COMMIT"</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="write_transaction-117"><a href="#write_transaction-117"><span class="linenos">117</span></a><span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+</span><span id="write_transaction-118"><a href="#write_transaction-118"><span class="linenos">118</span></a><span class="k">def</span><span class="w"> </span><span class="nf">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">]:</span>
+</span><span id="write_transaction-119"><a href="#write_transaction-119"><span class="linenos">119</span></a><span class="w">    </span><span class="sd">"""Run a block in one `BEGIN IMMEDIATE` transaction.</span>
+</span><span id="write_transaction-120"><a href="#write_transaction-120"><span class="linenos">120</span></a>
+</span><span id="write_transaction-121"><a href="#write_transaction-121"><span class="linenos">121</span></a><span class="sd">    `IMMEDIATE` takes the write lock up front, so `busy_timeout` governs the</span>
+</span><span id="write_transaction-122"><a href="#write_transaction-122"><span class="linenos">122</span></a><span class="sd">    wait. A deferred transaction that reads first and then writes can fail with</span>
+</span><span id="write_transaction-123"><a href="#write_transaction-123"><span class="linenos">123</span></a><span class="sd">    a busy error that the timeout cannot retry.</span>
+</span><span id="write_transaction-124"><a href="#write_transaction-124"><span class="linenos">124</span></a>
+</span><span id="write_transaction-125"><a href="#write_transaction-125"><span class="linenos">125</span></a><span class="sd">    Args:</span>
+</span><span id="write_transaction-126"><a href="#write_transaction-126"><span class="linenos">126</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="write_transaction-127"><a href="#write_transaction-127"><span class="linenos">127</span></a>
+</span><span id="write_transaction-128"><a href="#write_transaction-128"><span class="linenos">128</span></a><span class="sd">    Yields:</span>
+</span><span id="write_transaction-129"><a href="#write_transaction-129"><span class="linenos">129</span></a><span class="sd">        The same connection.</span>
+</span><span id="write_transaction-130"><a href="#write_transaction-130"><span class="linenos">130</span></a><span class="sd">    """</span>
+</span><span id="write_transaction-131"><a href="#write_transaction-131"><span class="linenos">131</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"BEGIN IMMEDIATE"</span><span class="p">)</span>
+</span><span id="write_transaction-132"><a href="#write_transaction-132"><span class="linenos">132</span></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="write_transaction-133"><a href="#write_transaction-133"><span class="linenos">133</span></a>        <span class="k">yield</span> <span class="n">conn</span>
+</span><span id="write_transaction-134"><a href="#write_transaction-134"><span class="linenos">134</span></a>    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+</span><span id="write_transaction-135"><a href="#write_transaction-135"><span class="linenos">135</span></a>        <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"ROLLBACK"</span><span class="p">)</span>
+</span><span id="write_transaction-136"><a href="#write_transaction-136"><span class="linenos">136</span></a>        <span class="k">raise</span>
+</span><span id="write_transaction-137"><a href="#write_transaction-137"><span class="linenos">137</span></a>    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"COMMIT"</span><span class="p">)</span>
 </span></pre></div>
 
 

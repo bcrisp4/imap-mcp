@@ -13,7 +13,7 @@ from fakes import FakeCredentialSource
 from imap_mcp.adapters.imap.guard import install_guard
 from imap_mcp.adapters.imap.session import ImapMailSourceFactory
 from imap_mcp.domain.enums import FolderRole
-from imap_mcp.domain.errors import GuardViolation, MailError
+from imap_mcp.domain.errors import ConfigError, GuardViolation, MailError
 from imap_mcp.ports import MailSource, MailSourceFactory
 from imapserver.server import PASSWORD, USERNAME, FakeImapServer, Quirks
 
@@ -188,6 +188,7 @@ class TestDrafts:
         self, imap_server: FakeImapServer, client_ssl_context: ssl.SSLContext
     ) -> None:
         with factory_for(imap_server, client_ssl_context).open() as source:
+            assert source.drafts_folder() == "Drafts"
             source.append_draft("Drafts", make_message(subject="Re: hi"))
 
         (stored,) = imap_server.mailboxes["Drafts"].messages
@@ -200,10 +201,27 @@ class TestDrafts:
             factory_for(imap_server, client_ssl_context).open() as source,
             pytest.raises(GuardViolation),
         ):
+            source.drafts_folder()
             source.append_draft("INBOX", make_message())
 
         assert imap_server.mailboxes["INBOX"].messages == []
         assert "APPEND" not in imap_server.command_verbs()
+
+    def test_a_missing_configured_drafts_folder_names_the_setting(
+        self, imap_server: FakeImapServer, client_ssl_context: ssl.SSLContext
+    ) -> None:
+        factory = factory_for(imap_server, client_ssl_context, drafts_folder="Draft")
+
+        with factory.open() as source, pytest.raises(ConfigError, match="'Draft'"):
+            source.drafts_folder()
+
+    def test_opening_a_session_sends_no_list(
+        self, imap_server: FakeImapServer, client_ssl_context: ssl.SSLContext
+    ) -> None:
+        with factory_for(imap_server, client_ssl_context).open():
+            pass
+
+        assert "LIST" not in imap_server.command_verbs()
 
     def test_a_raw_write_on_a_guarded_client_is_refused(
         self, imap_server: FakeImapServer, client_ssl_context: ssl.SSLContext

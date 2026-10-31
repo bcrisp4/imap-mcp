@@ -27,7 +27,7 @@ from imap_mcp.adapters.imap.guard import GuardHandle, install_guard
 from imap_mcp.adapters.imap.structure import parse_structure
 from imap_mcp.adapters.imap.uidset import render_uid_sets
 from imap_mcp.domain.enums import FolderRole
-from imap_mcp.domain.errors import GuardViolation, MailError
+from imap_mcp.domain.errors import ConfigError, GuardViolation, MailError
 from imap_mcp.domain.folders import folder_role
 from imap_mcp.domain.model import FetchedHeader, Folder, FolderStatus
 
@@ -86,17 +86,22 @@ def _find_section(item: dict[Any, Any], prefix: str) -> bytes | None:
 class ImapMailSource:
     """One logged-in IMAP session. Implements `MailSource`."""
 
-    def __init__(self, client: Any, guard: GuardHandle) -> None:
+    def __init__(
+        self, client: Any, guard: GuardHandle, configured_drafts: str = ""
+    ) -> None:
         """Wrap a connected, logged-in client that already has the guard.
 
         Args:
             client: The `IMAPClient`.
             guard: The handle of the installed guard.
+            configured_drafts: The `drafts_folder` setting. Empty means find
+                the folder by role.
         """
         self._client = client
         self._guard = guard
+        self._configured_drafts = configured_drafts
         self._capabilities: frozenset[str] | None = None
-        self._drafts = ""
+        self._drafts: str | None = None
 
     def capabilities(self) -> frozenset[str]:
         """Return the post-login capabilities, upper case."""
@@ -269,13 +274,33 @@ class ImapMailSource:
         return bytes(data)
 
     def drafts_folder(self) -> str:
-        """Return the Drafts folder that the guard allows for APPEND."""
-        return self._drafts
+        """Find the Drafts folder and allow APPEND to it, at the guard only.
 
-    def set_drafts_folder(self, name: str) -> None:
-        """Allow APPEND to this folder only, at the guard and here."""
-        self._drafts = name
-        self._guard.allow_drafts_folder(name)
+        It runs LIST on the first call only, so a session that never writes a
+        draft sends no extra command.
+
+        Returns:
+            The folder name, or "" if the server has no Drafts folder.
+
+        Raises:
+            ConfigError: If the configured `drafts_folder` does not exist.
+        """
+        if self._drafts is None:
+            folders = self.list_folders()
+            if self._configured_drafts:
+                if not any(f.name == self._configured_drafts for f in folders):
+                    msg = (
+                        f"drafts_folder {self._configured_drafts!r} does not exist"
+                        " on the server. Fix it in the config file."
+                    )
+                    raise ConfigError(msg)
+                self._drafts = self._configured_drafts
+            else:
+                self._drafts = next(
+                    (f.name for f in folders if f.role is FolderRole.DRAFTS), ""
+                )
+            self._guard.allow_drafts_folder(self._drafts)
+        return self._drafts
 
     def append_draft(self, folder: str, message: bytes) -> None:
         """Store a message in the Drafts folder with the `\\Draft` flag."""
@@ -344,20 +369,8 @@ class ImapMailSourceFactory:
         try:
             with _mail_errors("LOGIN"):
                 client.login(self._username, password)
-            source = ImapMailSource(client, guard)
-            source.set_drafts_folder(self._resolve_drafts(source))
-            yield source
+            yield ImapMailSource(client, guard, self._drafts_folder)
         finally:
             with contextlib.suppress(*_TRANSPORT_ERRORS):
                 # LOGOUT, never CLOSE: CLOSE expunges.
                 client.logout()
-
-    def _resolve_drafts(self, source: ImapMailSource) -> str:
-        folders = source.list_folders()
-        if self._drafts_folder:
-            return (
-                self._drafts_folder
-                if any(f.name == self._drafts_folder for f in folders)
-                else ""
-            )
-        return next((f.name for f in folders if f.role is FolderRole.DRAFTS), "")

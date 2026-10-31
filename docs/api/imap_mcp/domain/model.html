@@ -748,69 +748,71 @@ them as Unix integer seconds.</p>
 </span><span id="L-270"><a href="#L-270"><span class="linenos">270</span></a><span class="sd">        last_attempt: The start time of the last sync of any outcome.</span>
 </span><span id="L-271"><a href="#L-271"><span class="linenos">271</span></a><span class="sd">        kind: The outcome of the last attempt.</span>
 </span><span id="L-272"><a href="#L-272"><span class="linenos">272</span></a><span class="sd">        error: The error of the last failed attempt.</span>
-</span><span id="L-273"><a href="#L-273"><span class="linenos">273</span></a><span class="sd">        remaining: Messages left to fetch after a partial sync.</span>
-</span><span id="L-274"><a href="#L-274"><span class="linenos">274</span></a><span class="sd">    """</span>
-</span><span id="L-275"><a href="#L-275"><span class="linenos">275</span></a>
-</span><span id="L-276"><a href="#L-276"><span class="linenos">276</span></a>    <span class="n">last_success</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="L-277"><a href="#L-277"><span class="linenos">277</span></a>    <span class="n">last_attempt</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="L-278"><a href="#L-278"><span class="linenos">278</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span> <span class="o">=</span> <span class="n">SyncStateKind</span><span class="o">.</span><span class="n">NEVER</span>
-</span><span id="L-279"><a href="#L-279"><span class="linenos">279</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="L-280"><a href="#L-280"><span class="linenos">280</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="L-281"><a href="#L-281"><span class="linenos">281</span></a>
+</span><span id="L-273"><a href="#L-273"><span class="linenos">273</span></a><span class="sd">        remaining: Messages left to fetch after a partial sync. None means</span>
+</span><span id="L-274"><a href="#L-274"><span class="linenos">274</span></a><span class="sd">            unknown, because folders were left unvisited.</span>
+</span><span id="L-275"><a href="#L-275"><span class="linenos">275</span></a><span class="sd">    """</span>
+</span><span id="L-276"><a href="#L-276"><span class="linenos">276</span></a>
+</span><span id="L-277"><a href="#L-277"><span class="linenos">277</span></a>    <span class="n">last_success</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="L-278"><a href="#L-278"><span class="linenos">278</span></a>    <span class="n">last_attempt</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="L-279"><a href="#L-279"><span class="linenos">279</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span> <span class="o">=</span> <span class="n">SyncStateKind</span><span class="o">.</span><span class="n">NEVER</span>
+</span><span id="L-280"><a href="#L-280"><span class="linenos">280</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="L-281"><a href="#L-281"><span class="linenos">281</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">0</span>
 </span><span id="L-282"><a href="#L-282"><span class="linenos">282</span></a>
-</span><span id="L-283"><a href="#L-283"><span class="linenos">283</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a><span class="k">class</span><span class="w"> </span><span class="nc">SyncReport</span><span class="p">:</span>
-</span><span id="L-285"><a href="#L-285"><span class="linenos">285</span></a><span class="w">    </span><span class="sd">"""What one sync run did.</span>
-</span><span id="L-286"><a href="#L-286"><span class="linenos">286</span></a>
-</span><span id="L-287"><a href="#L-287"><span class="linenos">287</span></a><span class="sd">    Attributes:</span>
-</span><span id="L-288"><a href="#L-288"><span class="linenos">288</span></a><span class="sd">        kind: The outcome.</span>
-</span><span id="L-289"><a href="#L-289"><span class="linenos">289</span></a><span class="sd">        new_messages: Messages fetched and indexed.</span>
-</span><span id="L-290"><a href="#L-290"><span class="linenos">290</span></a><span class="sd">        linked: Locations added for messages already in the index.</span>
-</span><span id="L-291"><a href="#L-291"><span class="linenos">291</span></a><span class="sd">        removed: Locations deleted because the server no longer has them.</span>
-</span><span id="L-292"><a href="#L-292"><span class="linenos">292</span></a><span class="sd">        flags_updated: Locations whose flags changed.</span>
-</span><span id="L-293"><a href="#L-293"><span class="linenos">293</span></a><span class="sd">        remaining: Messages left to fetch when the time budget expired.</span>
-</span><span id="L-294"><a href="#L-294"><span class="linenos">294</span></a><span class="sd">        error: The error message of a failed sync.</span>
-</span><span id="L-295"><a href="#L-295"><span class="linenos">295</span></a><span class="sd">        folders: The folders the run examined.</span>
-</span><span id="L-296"><a href="#L-296"><span class="linenos">296</span></a><span class="sd">    """</span>
-</span><span id="L-297"><a href="#L-297"><span class="linenos">297</span></a>
-</span><span id="L-298"><a href="#L-298"><span class="linenos">298</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span>
-</span><span id="L-299"><a href="#L-299"><span class="linenos">299</span></a>    <span class="n">new_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="L-300"><a href="#L-300"><span class="linenos">300</span></a>    <span class="n">linked</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="L-301"><a href="#L-301"><span class="linenos">301</span></a>    <span class="n">removed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="L-302"><a href="#L-302"><span class="linenos">302</span></a>    <span class="n">flags_updated</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="L-303"><a href="#L-303"><span class="linenos">303</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="L-304"><a href="#L-304"><span class="linenos">304</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="L-305"><a href="#L-305"><span class="linenos">305</span></a>    <span class="n">folders</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">())</span>
-</span><span id="L-306"><a href="#L-306"><span class="linenos">306</span></a>
-</span><span id="L-307"><a href="#L-307"><span class="linenos">307</span></a>
-</span><span id="L-308"><a href="#L-308"><span class="linenos">308</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-309"><a href="#L-309"><span class="linenos">309</span></a><span class="k">class</span><span class="w"> </span><span class="nc">DraftResult</span><span class="p">:</span>
-</span><span id="L-310"><a href="#L-310"><span class="linenos">310</span></a><span class="w">    </span><span class="sd">"""What `create_draft` returns.</span>
-</span><span id="L-311"><a href="#L-311"><span class="linenos">311</span></a>
-</span><span id="L-312"><a href="#L-312"><span class="linenos">312</span></a><span class="sd">    Attributes:</span>
-</span><span id="L-313"><a href="#L-313"><span class="linenos">313</span></a><span class="sd">        message_id: The `Message-ID` of the new draft.</span>
-</span><span id="L-314"><a href="#L-314"><span class="linenos">314</span></a><span class="sd">        folder: The Drafts folder name.</span>
-</span><span id="L-315"><a href="#L-315"><span class="linenos">315</span></a><span class="sd">        new_recipients: Recipients I never wrote to before.</span>
-</span><span id="L-316"><a href="#L-316"><span class="linenos">316</span></a><span class="sd">    """</span>
-</span><span id="L-317"><a href="#L-317"><span class="linenos">317</span></a>
-</span><span id="L-318"><a href="#L-318"><span class="linenos">318</span></a>    <span class="n">message_id</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="L-319"><a href="#L-319"><span class="linenos">319</span></a>    <span class="n">folder</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="L-320"><a href="#L-320"><span class="linenos">320</span></a>    <span class="n">new_recipients</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
-</span><span id="L-321"><a href="#L-321"><span class="linenos">321</span></a>
-</span><span id="L-322"><a href="#L-322"><span class="linenos">322</span></a>
-</span><span id="L-323"><a href="#L-323"><span class="linenos">323</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-324"><a href="#L-324"><span class="linenos">324</span></a><span class="k">class</span><span class="w"> </span><span class="nc">IndexStats</span><span class="p">:</span>
-</span><span id="L-325"><a href="#L-325"><span class="linenos">325</span></a><span class="w">    </span><span class="sd">"""Size figures for `imap-mcp status`.</span>
-</span><span id="L-326"><a href="#L-326"><span class="linenos">326</span></a>
-</span><span id="L-327"><a href="#L-327"><span class="linenos">327</span></a><span class="sd">    Attributes:</span>
-</span><span id="L-328"><a href="#L-328"><span class="linenos">328</span></a><span class="sd">        messages: Messages in the index.</span>
-</span><span id="L-329"><a href="#L-329"><span class="linenos">329</span></a><span class="sd">        file_bytes: The database file size.</span>
-</span><span id="L-330"><a href="#L-330"><span class="linenos">330</span></a><span class="sd">        free_bytes: Bytes in free pages.</span>
-</span><span id="L-331"><a href="#L-331"><span class="linenos">331</span></a><span class="sd">    """</span>
-</span><span id="L-332"><a href="#L-332"><span class="linenos">332</span></a>
-</span><span id="L-333"><a href="#L-333"><span class="linenos">333</span></a>    <span class="n">messages</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="L-334"><a href="#L-334"><span class="linenos">334</span></a>    <span class="n">file_bytes</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a>    <span class="n">free_bytes</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="L-283"><a href="#L-283"><span class="linenos">283</span></a>
+</span><span id="L-284"><a href="#L-284"><span class="linenos">284</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-285"><a href="#L-285"><span class="linenos">285</span></a><span class="k">class</span><span class="w"> </span><span class="nc">SyncReport</span><span class="p">:</span>
+</span><span id="L-286"><a href="#L-286"><span class="linenos">286</span></a><span class="w">    </span><span class="sd">"""What one sync run did.</span>
+</span><span id="L-287"><a href="#L-287"><span class="linenos">287</span></a>
+</span><span id="L-288"><a href="#L-288"><span class="linenos">288</span></a><span class="sd">    Attributes:</span>
+</span><span id="L-289"><a href="#L-289"><span class="linenos">289</span></a><span class="sd">        kind: The outcome.</span>
+</span><span id="L-290"><a href="#L-290"><span class="linenos">290</span></a><span class="sd">        new_messages: Messages fetched and indexed.</span>
+</span><span id="L-291"><a href="#L-291"><span class="linenos">291</span></a><span class="sd">        linked: Locations added for messages already in the index.</span>
+</span><span id="L-292"><a href="#L-292"><span class="linenos">292</span></a><span class="sd">        removed: Locations deleted because the server no longer has them.</span>
+</span><span id="L-293"><a href="#L-293"><span class="linenos">293</span></a><span class="sd">        flags_updated: Locations whose flags changed.</span>
+</span><span id="L-294"><a href="#L-294"><span class="linenos">294</span></a><span class="sd">        remaining: Messages left to fetch when the time budget expired. None</span>
+</span><span id="L-295"><a href="#L-295"><span class="linenos">295</span></a><span class="sd">            means unknown, because folders were left unvisited.</span>
+</span><span id="L-296"><a href="#L-296"><span class="linenos">296</span></a><span class="sd">        error: The error message of a failed sync.</span>
+</span><span id="L-297"><a href="#L-297"><span class="linenos">297</span></a><span class="sd">        folders: The folders the run examined.</span>
+</span><span id="L-298"><a href="#L-298"><span class="linenos">298</span></a><span class="sd">    """</span>
+</span><span id="L-299"><a href="#L-299"><span class="linenos">299</span></a>
+</span><span id="L-300"><a href="#L-300"><span class="linenos">300</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span>
+</span><span id="L-301"><a href="#L-301"><span class="linenos">301</span></a>    <span class="n">new_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="L-302"><a href="#L-302"><span class="linenos">302</span></a>    <span class="n">linked</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="L-303"><a href="#L-303"><span class="linenos">303</span></a>    <span class="n">removed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="L-304"><a href="#L-304"><span class="linenos">304</span></a>    <span class="n">flags_updated</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="L-305"><a href="#L-305"><span class="linenos">305</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="L-306"><a href="#L-306"><span class="linenos">306</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="L-307"><a href="#L-307"><span class="linenos">307</span></a>    <span class="n">folders</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">())</span>
+</span><span id="L-308"><a href="#L-308"><span class="linenos">308</span></a>
+</span><span id="L-309"><a href="#L-309"><span class="linenos">309</span></a>
+</span><span id="L-310"><a href="#L-310"><span class="linenos">310</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-311"><a href="#L-311"><span class="linenos">311</span></a><span class="k">class</span><span class="w"> </span><span class="nc">DraftResult</span><span class="p">:</span>
+</span><span id="L-312"><a href="#L-312"><span class="linenos">312</span></a><span class="w">    </span><span class="sd">"""What `create_draft` returns.</span>
+</span><span id="L-313"><a href="#L-313"><span class="linenos">313</span></a>
+</span><span id="L-314"><a href="#L-314"><span class="linenos">314</span></a><span class="sd">    Attributes:</span>
+</span><span id="L-315"><a href="#L-315"><span class="linenos">315</span></a><span class="sd">        message_id: The `Message-ID` of the new draft.</span>
+</span><span id="L-316"><a href="#L-316"><span class="linenos">316</span></a><span class="sd">        folder: The Drafts folder name.</span>
+</span><span id="L-317"><a href="#L-317"><span class="linenos">317</span></a><span class="sd">        new_recipients: Recipients I never wrote to before.</span>
+</span><span id="L-318"><a href="#L-318"><span class="linenos">318</span></a><span class="sd">    """</span>
+</span><span id="L-319"><a href="#L-319"><span class="linenos">319</span></a>
+</span><span id="L-320"><a href="#L-320"><span class="linenos">320</span></a>    <span class="n">message_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="L-321"><a href="#L-321"><span class="linenos">321</span></a>    <span class="n">folder</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="L-322"><a href="#L-322"><span class="linenos">322</span></a>    <span class="n">new_recipients</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</span><span id="L-323"><a href="#L-323"><span class="linenos">323</span></a>
+</span><span id="L-324"><a href="#L-324"><span class="linenos">324</span></a>
+</span><span id="L-325"><a href="#L-325"><span class="linenos">325</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-326"><a href="#L-326"><span class="linenos">326</span></a><span class="k">class</span><span class="w"> </span><span class="nc">IndexStats</span><span class="p">:</span>
+</span><span id="L-327"><a href="#L-327"><span class="linenos">327</span></a><span class="w">    </span><span class="sd">"""Size figures for `imap-mcp status`.</span>
+</span><span id="L-328"><a href="#L-328"><span class="linenos">328</span></a>
+</span><span id="L-329"><a href="#L-329"><span class="linenos">329</span></a><span class="sd">    Attributes:</span>
+</span><span id="L-330"><a href="#L-330"><span class="linenos">330</span></a><span class="sd">        messages: Messages in the index.</span>
+</span><span id="L-331"><a href="#L-331"><span class="linenos">331</span></a><span class="sd">        file_bytes: The database file size.</span>
+</span><span id="L-332"><a href="#L-332"><span class="linenos">332</span></a><span class="sd">        free_bytes: Bytes in free pages.</span>
+</span><span id="L-333"><a href="#L-333"><span class="linenos">333</span></a><span class="sd">    """</span>
+</span><span id="L-334"><a href="#L-334"><span class="linenos">334</span></a>
+</span><span id="L-335"><a href="#L-335"><span class="linenos">335</span></a>    <span class="n">messages</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="L-336"><a href="#L-336"><span class="linenos">336</span></a>    <span class="n">file_bytes</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="L-337"><a href="#L-337"><span class="linenos">337</span></a>    <span class="n">free_bytes</span><span class="p">:</span> <span class="nb">int</span>
 </span></pre></div>
 
 
@@ -2362,14 +2364,15 @@ them as Unix integer seconds.</p>
 </span><span id="SyncState-271"><a href="#SyncState-271"><span class="linenos">271</span></a><span class="sd">        last_attempt: The start time of the last sync of any outcome.</span>
 </span><span id="SyncState-272"><a href="#SyncState-272"><span class="linenos">272</span></a><span class="sd">        kind: The outcome of the last attempt.</span>
 </span><span id="SyncState-273"><a href="#SyncState-273"><span class="linenos">273</span></a><span class="sd">        error: The error of the last failed attempt.</span>
-</span><span id="SyncState-274"><a href="#SyncState-274"><span class="linenos">274</span></a><span class="sd">        remaining: Messages left to fetch after a partial sync.</span>
-</span><span id="SyncState-275"><a href="#SyncState-275"><span class="linenos">275</span></a><span class="sd">    """</span>
-</span><span id="SyncState-276"><a href="#SyncState-276"><span class="linenos">276</span></a>
-</span><span id="SyncState-277"><a href="#SyncState-277"><span class="linenos">277</span></a>    <span class="n">last_success</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="SyncState-278"><a href="#SyncState-278"><span class="linenos">278</span></a>    <span class="n">last_attempt</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="SyncState-279"><a href="#SyncState-279"><span class="linenos">279</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span> <span class="o">=</span> <span class="n">SyncStateKind</span><span class="o">.</span><span class="n">NEVER</span>
-</span><span id="SyncState-280"><a href="#SyncState-280"><span class="linenos">280</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="SyncState-281"><a href="#SyncState-281"><span class="linenos">281</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="SyncState-274"><a href="#SyncState-274"><span class="linenos">274</span></a><span class="sd">        remaining: Messages left to fetch after a partial sync. None means</span>
+</span><span id="SyncState-275"><a href="#SyncState-275"><span class="linenos">275</span></a><span class="sd">            unknown, because folders were left unvisited.</span>
+</span><span id="SyncState-276"><a href="#SyncState-276"><span class="linenos">276</span></a><span class="sd">    """</span>
+</span><span id="SyncState-277"><a href="#SyncState-277"><span class="linenos">277</span></a>
+</span><span id="SyncState-278"><a href="#SyncState-278"><span class="linenos">278</span></a>    <span class="n">last_success</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="SyncState-279"><a href="#SyncState-279"><span class="linenos">279</span></a>    <span class="n">last_attempt</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="SyncState-280"><a href="#SyncState-280"><span class="linenos">280</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span> <span class="o">=</span> <span class="n">SyncStateKind</span><span class="o">.</span><span class="n">NEVER</span>
+</span><span id="SyncState-281"><a href="#SyncState-281"><span class="linenos">281</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="SyncState-282"><a href="#SyncState-282"><span class="linenos">282</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">0</span>
 </span></pre></div>
 
 
@@ -2382,7 +2385,8 @@ them as Unix integer seconds.</p>
 <li><strong>last_attempt:</strong>  The start time of the last sync of any outcome.</li>
 <li><strong>kind:</strong>  The outcome of the last attempt.</li>
 <li><strong>error:</strong>  The error of the last failed attempt.</li>
-<li><strong>remaining:</strong>  Messages left to fetch after a partial sync.</li>
+<li><strong>remaining:</strong>  Messages left to fetch after a partial sync. None means
+unknown, because folders were left unvisited.</li>
 </ul>
 </div>
 
@@ -2390,7 +2394,7 @@ them as Unix integer seconds.</p>
                             <div id="SyncState.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">SyncState</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">last_success</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">last_attempt</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">kind</span><span class="p">:</span> <span class="n"><a href="enums.html#SyncStateKind">imap_mcp.domain.enums.SyncStateKind</a></span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">SyncStateKind</span><span class="o">.</span><span class="n">NEVER</span><span class="p">:</span> <span class="s1">'never'</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span></span>)</span>
+        <span class="name">SyncState</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">last_success</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">last_attempt</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">kind</span><span class="p">:</span> <span class="n"><a href="enums.html#SyncStateKind">imap_mcp.domain.enums.SyncStateKind</a></span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">SyncStateKind</span><span class="o">.</span><span class="n">NEVER</span><span class="p">:</span> <span class="s1">'never'</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">0</span></span>)</span>
 
         
     </div>
@@ -2445,7 +2449,7 @@ them as Unix integer seconds.</p>
                             </div>
                             <div id="SyncState.remaining" class="classattr">
                                 <div class="attr variable">
-            <span class="name">remaining</span><span class="annotation">: int</span>
+            <span class="name">remaining</span><span class="annotation">: int | None</span>
 
         
     </div>
@@ -2467,29 +2471,30 @@ them as Unix integer seconds.</p>
 
     </div>
     <a class="headerlink" href="#SyncReport"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="SyncReport-284"><a href="#SyncReport-284"><span class="linenos">284</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="SyncReport-285"><a href="#SyncReport-285"><span class="linenos">285</span></a><span class="k">class</span><span class="w"> </span><span class="nc">SyncReport</span><span class="p">:</span>
-</span><span id="SyncReport-286"><a href="#SyncReport-286"><span class="linenos">286</span></a><span class="w">    </span><span class="sd">"""What one sync run did.</span>
-</span><span id="SyncReport-287"><a href="#SyncReport-287"><span class="linenos">287</span></a>
-</span><span id="SyncReport-288"><a href="#SyncReport-288"><span class="linenos">288</span></a><span class="sd">    Attributes:</span>
-</span><span id="SyncReport-289"><a href="#SyncReport-289"><span class="linenos">289</span></a><span class="sd">        kind: The outcome.</span>
-</span><span id="SyncReport-290"><a href="#SyncReport-290"><span class="linenos">290</span></a><span class="sd">        new_messages: Messages fetched and indexed.</span>
-</span><span id="SyncReport-291"><a href="#SyncReport-291"><span class="linenos">291</span></a><span class="sd">        linked: Locations added for messages already in the index.</span>
-</span><span id="SyncReport-292"><a href="#SyncReport-292"><span class="linenos">292</span></a><span class="sd">        removed: Locations deleted because the server no longer has them.</span>
-</span><span id="SyncReport-293"><a href="#SyncReport-293"><span class="linenos">293</span></a><span class="sd">        flags_updated: Locations whose flags changed.</span>
-</span><span id="SyncReport-294"><a href="#SyncReport-294"><span class="linenos">294</span></a><span class="sd">        remaining: Messages left to fetch when the time budget expired.</span>
-</span><span id="SyncReport-295"><a href="#SyncReport-295"><span class="linenos">295</span></a><span class="sd">        error: The error message of a failed sync.</span>
-</span><span id="SyncReport-296"><a href="#SyncReport-296"><span class="linenos">296</span></a><span class="sd">        folders: The folders the run examined.</span>
-</span><span id="SyncReport-297"><a href="#SyncReport-297"><span class="linenos">297</span></a><span class="sd">    """</span>
-</span><span id="SyncReport-298"><a href="#SyncReport-298"><span class="linenos">298</span></a>
-</span><span id="SyncReport-299"><a href="#SyncReport-299"><span class="linenos">299</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span>
-</span><span id="SyncReport-300"><a href="#SyncReport-300"><span class="linenos">300</span></a>    <span class="n">new_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="SyncReport-301"><a href="#SyncReport-301"><span class="linenos">301</span></a>    <span class="n">linked</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="SyncReport-302"><a href="#SyncReport-302"><span class="linenos">302</span></a>    <span class="n">removed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="SyncReport-303"><a href="#SyncReport-303"><span class="linenos">303</span></a>    <span class="n">flags_updated</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="SyncReport-304"><a href="#SyncReport-304"><span class="linenos">304</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="SyncReport-305"><a href="#SyncReport-305"><span class="linenos">305</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="SyncReport-306"><a href="#SyncReport-306"><span class="linenos">306</span></a>    <span class="n">folders</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">())</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="SyncReport-285"><a href="#SyncReport-285"><span class="linenos">285</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="SyncReport-286"><a href="#SyncReport-286"><span class="linenos">286</span></a><span class="k">class</span><span class="w"> </span><span class="nc">SyncReport</span><span class="p">:</span>
+</span><span id="SyncReport-287"><a href="#SyncReport-287"><span class="linenos">287</span></a><span class="w">    </span><span class="sd">"""What one sync run did.</span>
+</span><span id="SyncReport-288"><a href="#SyncReport-288"><span class="linenos">288</span></a>
+</span><span id="SyncReport-289"><a href="#SyncReport-289"><span class="linenos">289</span></a><span class="sd">    Attributes:</span>
+</span><span id="SyncReport-290"><a href="#SyncReport-290"><span class="linenos">290</span></a><span class="sd">        kind: The outcome.</span>
+</span><span id="SyncReport-291"><a href="#SyncReport-291"><span class="linenos">291</span></a><span class="sd">        new_messages: Messages fetched and indexed.</span>
+</span><span id="SyncReport-292"><a href="#SyncReport-292"><span class="linenos">292</span></a><span class="sd">        linked: Locations added for messages already in the index.</span>
+</span><span id="SyncReport-293"><a href="#SyncReport-293"><span class="linenos">293</span></a><span class="sd">        removed: Locations deleted because the server no longer has them.</span>
+</span><span id="SyncReport-294"><a href="#SyncReport-294"><span class="linenos">294</span></a><span class="sd">        flags_updated: Locations whose flags changed.</span>
+</span><span id="SyncReport-295"><a href="#SyncReport-295"><span class="linenos">295</span></a><span class="sd">        remaining: Messages left to fetch when the time budget expired. None</span>
+</span><span id="SyncReport-296"><a href="#SyncReport-296"><span class="linenos">296</span></a><span class="sd">            means unknown, because folders were left unvisited.</span>
+</span><span id="SyncReport-297"><a href="#SyncReport-297"><span class="linenos">297</span></a><span class="sd">        error: The error message of a failed sync.</span>
+</span><span id="SyncReport-298"><a href="#SyncReport-298"><span class="linenos">298</span></a><span class="sd">        folders: The folders the run examined.</span>
+</span><span id="SyncReport-299"><a href="#SyncReport-299"><span class="linenos">299</span></a><span class="sd">    """</span>
+</span><span id="SyncReport-300"><a href="#SyncReport-300"><span class="linenos">300</span></a>
+</span><span id="SyncReport-301"><a href="#SyncReport-301"><span class="linenos">301</span></a>    <span class="n">kind</span><span class="p">:</span> <span class="n">SyncStateKind</span>
+</span><span id="SyncReport-302"><a href="#SyncReport-302"><span class="linenos">302</span></a>    <span class="n">new_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="SyncReport-303"><a href="#SyncReport-303"><span class="linenos">303</span></a>    <span class="n">linked</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="SyncReport-304"><a href="#SyncReport-304"><span class="linenos">304</span></a>    <span class="n">removed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="SyncReport-305"><a href="#SyncReport-305"><span class="linenos">305</span></a>    <span class="n">flags_updated</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="SyncReport-306"><a href="#SyncReport-306"><span class="linenos">306</span></a>    <span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="SyncReport-307"><a href="#SyncReport-307"><span class="linenos">307</span></a>    <span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="SyncReport-308"><a href="#SyncReport-308"><span class="linenos">308</span></a>    <span class="n">folders</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">())</span>
 </span></pre></div>
 
 
@@ -2503,7 +2508,8 @@ them as Unix integer seconds.</p>
 <li><strong>linked:</strong>  Locations added for messages already in the index.</li>
 <li><strong>removed:</strong>  Locations deleted because the server no longer has them.</li>
 <li><strong>flags_updated:</strong>  Locations whose flags changed.</li>
-<li><strong>remaining:</strong>  Messages left to fetch when the time budget expired.</li>
+<li><strong>remaining:</strong>  Messages left to fetch when the time budget expired. None
+means unknown, because folders were left unvisited.</li>
 <li><strong>error:</strong>  The error message of a failed sync.</li>
 <li><strong>folders:</strong>  The folders the run examined.</li>
 </ul>
@@ -2513,7 +2519,7 @@ them as Unix integer seconds.</p>
                             <div id="SyncReport.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">SyncReport</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">kind</span><span class="p">:</span> <span class="n"><a href="enums.html#SyncStateKind">imap_mcp.domain.enums.SyncStateKind</a></span>,</span><span class="param">	<span class="n">new_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">linked</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">removed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">flags_updated</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">folders</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span></span>)</span>
+        <span class="name">SyncReport</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">kind</span><span class="p">:</span> <span class="n"><a href="enums.html#SyncStateKind">imap_mcp.domain.enums.SyncStateKind</a></span>,</span><span class="param">	<span class="n">new_messages</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">linked</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">removed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">flags_updated</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">remaining</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">error</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">folders</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span></span>)</span>
 
         
     </div>
@@ -2579,7 +2585,7 @@ them as Unix integer seconds.</p>
                             </div>
                             <div id="SyncReport.remaining" class="classattr">
                                 <div class="attr variable">
-            <span class="name">remaining</span><span class="annotation">: int</span>
+            <span class="name">remaining</span><span class="annotation">: int | None</span>
 
         
     </div>
@@ -2623,19 +2629,19 @@ them as Unix integer seconds.</p>
 
     </div>
     <a class="headerlink" href="#DraftResult"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="DraftResult-309"><a href="#DraftResult-309"><span class="linenos">309</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="DraftResult-310"><a href="#DraftResult-310"><span class="linenos">310</span></a><span class="k">class</span><span class="w"> </span><span class="nc">DraftResult</span><span class="p">:</span>
-</span><span id="DraftResult-311"><a href="#DraftResult-311"><span class="linenos">311</span></a><span class="w">    </span><span class="sd">"""What `create_draft` returns.</span>
-</span><span id="DraftResult-312"><a href="#DraftResult-312"><span class="linenos">312</span></a>
-</span><span id="DraftResult-313"><a href="#DraftResult-313"><span class="linenos">313</span></a><span class="sd">    Attributes:</span>
-</span><span id="DraftResult-314"><a href="#DraftResult-314"><span class="linenos">314</span></a><span class="sd">        message_id: The `Message-ID` of the new draft.</span>
-</span><span id="DraftResult-315"><a href="#DraftResult-315"><span class="linenos">315</span></a><span class="sd">        folder: The Drafts folder name.</span>
-</span><span id="DraftResult-316"><a href="#DraftResult-316"><span class="linenos">316</span></a><span class="sd">        new_recipients: Recipients I never wrote to before.</span>
-</span><span id="DraftResult-317"><a href="#DraftResult-317"><span class="linenos">317</span></a><span class="sd">    """</span>
-</span><span id="DraftResult-318"><a href="#DraftResult-318"><span class="linenos">318</span></a>
-</span><span id="DraftResult-319"><a href="#DraftResult-319"><span class="linenos">319</span></a>    <span class="n">message_id</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="DraftResult-320"><a href="#DraftResult-320"><span class="linenos">320</span></a>    <span class="n">folder</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="DraftResult-321"><a href="#DraftResult-321"><span class="linenos">321</span></a>    <span class="n">new_recipients</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="DraftResult-311"><a href="#DraftResult-311"><span class="linenos">311</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="DraftResult-312"><a href="#DraftResult-312"><span class="linenos">312</span></a><span class="k">class</span><span class="w"> </span><span class="nc">DraftResult</span><span class="p">:</span>
+</span><span id="DraftResult-313"><a href="#DraftResult-313"><span class="linenos">313</span></a><span class="w">    </span><span class="sd">"""What `create_draft` returns.</span>
+</span><span id="DraftResult-314"><a href="#DraftResult-314"><span class="linenos">314</span></a>
+</span><span id="DraftResult-315"><a href="#DraftResult-315"><span class="linenos">315</span></a><span class="sd">    Attributes:</span>
+</span><span id="DraftResult-316"><a href="#DraftResult-316"><span class="linenos">316</span></a><span class="sd">        message_id: The `Message-ID` of the new draft.</span>
+</span><span id="DraftResult-317"><a href="#DraftResult-317"><span class="linenos">317</span></a><span class="sd">        folder: The Drafts folder name.</span>
+</span><span id="DraftResult-318"><a href="#DraftResult-318"><span class="linenos">318</span></a><span class="sd">        new_recipients: Recipients I never wrote to before.</span>
+</span><span id="DraftResult-319"><a href="#DraftResult-319"><span class="linenos">319</span></a><span class="sd">    """</span>
+</span><span id="DraftResult-320"><a href="#DraftResult-320"><span class="linenos">320</span></a>
+</span><span id="DraftResult-321"><a href="#DraftResult-321"><span class="linenos">321</span></a>    <span class="n">message_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="DraftResult-322"><a href="#DraftResult-322"><span class="linenos">322</span></a>    <span class="n">folder</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="DraftResult-323"><a href="#DraftResult-323"><span class="linenos">323</span></a>    <span class="n">new_recipients</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
 </span></pre></div>
 
 
@@ -2709,19 +2715,19 @@ them as Unix integer seconds.</p>
 
     </div>
     <a class="headerlink" href="#IndexStats"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="IndexStats-324"><a href="#IndexStats-324"><span class="linenos">324</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="IndexStats-325"><a href="#IndexStats-325"><span class="linenos">325</span></a><span class="k">class</span><span class="w"> </span><span class="nc">IndexStats</span><span class="p">:</span>
-</span><span id="IndexStats-326"><a href="#IndexStats-326"><span class="linenos">326</span></a><span class="w">    </span><span class="sd">"""Size figures for `imap-mcp status`.</span>
-</span><span id="IndexStats-327"><a href="#IndexStats-327"><span class="linenos">327</span></a>
-</span><span id="IndexStats-328"><a href="#IndexStats-328"><span class="linenos">328</span></a><span class="sd">    Attributes:</span>
-</span><span id="IndexStats-329"><a href="#IndexStats-329"><span class="linenos">329</span></a><span class="sd">        messages: Messages in the index.</span>
-</span><span id="IndexStats-330"><a href="#IndexStats-330"><span class="linenos">330</span></a><span class="sd">        file_bytes: The database file size.</span>
-</span><span id="IndexStats-331"><a href="#IndexStats-331"><span class="linenos">331</span></a><span class="sd">        free_bytes: Bytes in free pages.</span>
-</span><span id="IndexStats-332"><a href="#IndexStats-332"><span class="linenos">332</span></a><span class="sd">    """</span>
-</span><span id="IndexStats-333"><a href="#IndexStats-333"><span class="linenos">333</span></a>
-</span><span id="IndexStats-334"><a href="#IndexStats-334"><span class="linenos">334</span></a>    <span class="n">messages</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="IndexStats-335"><a href="#IndexStats-335"><span class="linenos">335</span></a>    <span class="n">file_bytes</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="IndexStats-336"><a href="#IndexStats-336"><span class="linenos">336</span></a>    <span class="n">free_bytes</span><span class="p">:</span> <span class="nb">int</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="IndexStats-326"><a href="#IndexStats-326"><span class="linenos">326</span></a><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="IndexStats-327"><a href="#IndexStats-327"><span class="linenos">327</span></a><span class="k">class</span><span class="w"> </span><span class="nc">IndexStats</span><span class="p">:</span>
+</span><span id="IndexStats-328"><a href="#IndexStats-328"><span class="linenos">328</span></a><span class="w">    </span><span class="sd">"""Size figures for `imap-mcp status`.</span>
+</span><span id="IndexStats-329"><a href="#IndexStats-329"><span class="linenos">329</span></a>
+</span><span id="IndexStats-330"><a href="#IndexStats-330"><span class="linenos">330</span></a><span class="sd">    Attributes:</span>
+</span><span id="IndexStats-331"><a href="#IndexStats-331"><span class="linenos">331</span></a><span class="sd">        messages: Messages in the index.</span>
+</span><span id="IndexStats-332"><a href="#IndexStats-332"><span class="linenos">332</span></a><span class="sd">        file_bytes: The database file size.</span>
+</span><span id="IndexStats-333"><a href="#IndexStats-333"><span class="linenos">333</span></a><span class="sd">        free_bytes: Bytes in free pages.</span>
+</span><span id="IndexStats-334"><a href="#IndexStats-334"><span class="linenos">334</span></a><span class="sd">    """</span>
+</span><span id="IndexStats-335"><a href="#IndexStats-335"><span class="linenos">335</span></a>
+</span><span id="IndexStats-336"><a href="#IndexStats-336"><span class="linenos">336</span></a>    <span class="n">messages</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="IndexStats-337"><a href="#IndexStats-337"><span class="linenos">337</span></a>    <span class="n">file_bytes</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="IndexStats-338"><a href="#IndexStats-338"><span class="linenos">338</span></a>    <span class="n">free_bytes</span><span class="p">:</span> <span class="nb">int</span>
 </span></pre></div>
 
 

@@ -30,6 +30,8 @@ if TYPE_CHECKING:
     )
 
 _MAX_HEADER_CHARS: Final = 300
+MAX_LISTED_ADDRESSES: Final = 20
+"""Recipients shown per list. A sender controls the list, so it is capped."""
 
 
 class Wrapper:
@@ -57,6 +59,11 @@ def _plain(text: str, limit: int = _MAX_HEADER_CHARS) -> str:
     return strip_content_tags(strip_invisible(text))[:limit]
 
 
+def _addresses(values: tuple[str, ...]) -> list[str]:
+    """Clean and cap a recipient list."""
+    return [_plain(a) for a in values[:MAX_LISTED_ADDRESSES]]
+
+
 class SyncView(BaseModel):
     """How fresh the index is."""
 
@@ -68,7 +75,9 @@ class SyncView(BaseModel):
         description="complete, partial, in_progress_elsewhere, failed or never."
     )
     error: str | None = Field(description="The error of a failed sync.")
-    remaining: int = Field(description="Messages left to fetch after a partial sync.")
+    remaining: int | None = Field(
+        description="Messages left to fetch after a partial sync. Null means unknown."
+    )
 
 
 class AuthView(BaseModel):
@@ -105,6 +114,7 @@ class MessageSummaryView(BaseModel):
     id: int
     folders: list[str]
     date: datetime
+    to_count: int = Field(description="All To recipients. The list shows 20.")
     unread: bool
     flagged: bool
     auth: AuthView
@@ -142,6 +152,8 @@ class MessageView(BaseModel):
     id: int
     folders: list[str]
     date: datetime
+    to_count: int = Field(description="All To recipients. The list shows 20.")
+    cc_count: int = Field(description="All Cc recipients. The list shows 20.")
     unread: bool
     flagged: bool
     auth: AuthView
@@ -245,6 +257,7 @@ def search_view(
                 id=m.id,
                 folders=list(m.folders),
                 date=p.date,
+                to_count=len(p.to),
                 unread=m.unread,
                 flagged=m.flagged,
                 auth=_auth(m),
@@ -254,7 +267,7 @@ def search_view(
                 untrusted=UntrustedSummary(
                     message_id=_plain(p.message_id) if p.message_id else None,
                     from_address=_plain(p.from_address),
-                    to=[_plain(a) for a in p.to],
+                    to=_addresses(p.to),
                     from_name=_plain(p.from_name),
                     subject=_plain(p.subject),
                     snippet=wrapper.wrap(hit.snippet),
@@ -282,6 +295,8 @@ def message_view(
         id=message.id,
         folders=list(message.folders),
         date=p.date,
+        to_count=len(p.to),
+        cc_count=len(p.cc),
         unread=message.unread,
         flagged=message.flagged,
         auth=_auth(message),
@@ -294,8 +309,8 @@ def message_view(
         untrusted=UntrustedMessage(
             message_id=_plain(p.message_id) if p.message_id else None,
             from_address=_plain(p.from_address),
-            to=[_plain(a) for a in p.to],
-            cc=[_plain(a) for a in p.cc],
+            to=_addresses(p.to),
+            cc=_addresses(p.cc),
             from_name=_plain(p.from_name),
             subject=_plain(p.subject),
             body=wrapper.wrap(body),

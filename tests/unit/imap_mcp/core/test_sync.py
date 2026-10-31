@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from factories import make_message
 from fakes import FakeCredentialSource
 from imap_mcp.adapters.imap.session import ImapMailSourceFactory
 from imap_mcp.domain.enums import SyncStateKind
+from imap_mcp.domain.errors import NotFoundError
 from imap_mcp.domain.model import SearchQuery
 from imapserver.server import PASSWORD, USERNAME, Quirks
 
@@ -197,8 +200,10 @@ class TestBudgetAndFreshness:
         report = make_sync(batch_size=2).sync_now()
 
         assert report.kind is SyncStateKind.PARTIAL
-        assert report.remaining > 0
+        # INBOX stopped early and four folders were never visited.
+        assert report.remaining is None
         assert index.sync_state().kind is SyncStateKind.PARTIAL
+        assert index.sync_state().remaining is None
         assert index.sync_state().last_success is None
 
     def test_newest_messages_are_fetched_first(
@@ -331,7 +336,44 @@ class TestBudgetInsideABatch:
 
         assert report.kind is SyncStateKind.PARTIAL
         assert report.new_messages == 10
-        assert report.remaining == 15
         complete = make_sync(batch_size=50).full_sync()
         assert complete.new_messages == 15
         assert index.stats().messages == 25
+
+
+class TestSingleFolderSync:
+    def test_a_folder_sync_leaves_the_shared_freshness_alone(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+        index: SqliteIndex, clock: FakeClock,
+    ) -> None:  # fmt: skip
+        sync = make_sync()
+        sync.full_sync()
+        before = index.sync_state()
+
+        clock.advance(20 * 60)
+        report = sync.sync_now("Archive")
+
+        assert report.kind is SyncStateKind.COMPLETE
+        assert index.sync_state() == before
+
+    def test_an_unknown_folder_is_an_error(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+    ) -> None:  # fmt: skip
+        with pytest.raises(NotFoundError, match="inbox"):
+            make_sync().sync_now("inbox")
+
+    def test_flags_changed_between_two_runs_of_one_backfill_are_caught(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+        index: SqliteIndex, clock: FakeClock,
+    ) -> None:  # fmt: skip
+        for n in range(4):
+            imap_server.add_message("INBOX", make_message(subject=f"M{n}"))
+        clock.step = 5.0
+        make_sync(batch_size=1).sync_now()  # indexes M3 only, INBOX unfinished
+        clock.step = 0.0
+        imap_server.set_flags("INBOX", 4, ["\\Seen"])  # M3 read on a phone
+
+        make_sync(batch_size=1).full_sync()
+
+        page = index.search(SearchQuery(text="M3"), ALL)
+        assert page.hits[0].message.unread is False

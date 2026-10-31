@@ -115,7 +115,22 @@ CREATE TRIGGER messages_fts_update AFTER UPDATE ON messages BEGIN
 END;
 """
 
-MIGRATIONS: Final = (_V1,)
+# v2: `remaining` can be NULL (unknown). The table holds one row of derived
+# state, so it is rebuilt. The next tool call then syncs.
+_V2: Final = """
+DROP TABLE sync_state;
+
+CREATE TABLE sync_state (
+    id           INTEGER PRIMARY KEY CHECK (id = 1),
+    last_success INTEGER,
+    last_attempt INTEGER,
+    kind         TEXT    NOT NULL,
+    error        TEXT,
+    remaining    INTEGER
+) STRICT;
+"""
+
+MIGRATIONS: Final = (_V1, _V2)
 """Migration N takes the database from `user_version` N to N + 1."""
 
 

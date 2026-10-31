@@ -70,6 +70,7 @@ def has_other_connections(path: Path) -> bool:
 
     Leaving WAL mode needs the only connection to the file, so a refused switch
     means another process (an idle MCP server, for example) still has it open.
+    A switch that succeeds is undone at once, so the file stays in WAL mode.
 
     Args:
         path: The database file.
@@ -82,11 +83,34 @@ def has_other_connections(path: Path) -> bool:
     conn = sqlite3.connect(path, autocommit=True, timeout=0)
     try:
         mode = conn.execute("PRAGMA journal_mode = DELETE").fetchone()[0]
+        if str(mode).lower() == "delete":
+            conn.execute("PRAGMA journal_mode = WAL")
+            return False
     except sqlite3.OperationalError:
         return True
     finally:
         conn.close()
-    return str(mode).lower() != "delete"
+    return True
+
+
+@contextlib.contextmanager
+def read_transaction(conn: sqlite3.Connection) -> Generator[sqlite3.Connection]:
+    """Run several reads against one snapshot of the database.
+
+    In WAL mode, each autocommit statement can see a different commit. A
+    deferred transaction pins one snapshot for every read inside it.
+
+    Args:
+        conn: An autocommit connection.
+
+    Yields:
+        The same connection.
+    """
+    conn.execute("BEGIN")
+    try:
+        yield conn
+    finally:
+        conn.execute("COMMIT")
 
 
 @contextlib.contextmanager

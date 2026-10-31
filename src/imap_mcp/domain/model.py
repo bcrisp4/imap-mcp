@@ -270,14 +270,15 @@ class SyncState:
         last_attempt: The start time of the last sync of any outcome.
         kind: The outcome of the last attempt.
         error: The error of the last failed attempt.
-        remaining: Messages left to fetch after a partial sync.
+        remaining: Messages left to fetch after a partial sync. None means
+            unknown, because folders were left unvisited.
     """
 
     last_success: datetime | None = None
     last_attempt: datetime | None = None
     kind: SyncStateKind = SyncStateKind.NEVER
     error: str | None = None
-    remaining: int = 0
+    remaining: int | None = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -290,7 +291,8 @@ class SyncReport:
         linked: Locations added for messages already in the index.
         removed: Locations deleted because the server no longer has them.
         flags_updated: Locations whose flags changed.
-        remaining: Messages left to fetch when the time budget expired.
+        remaining: Messages left to fetch when the time budget expired. None
+            means unknown, because folders were left unvisited.
         error: The error message of a failed sync.
         folders: The folders the run examined.
     """
@@ -300,7 +302,7 @@ class SyncReport:
     linked: int = 0
     removed: int = 0
     flags_updated: int = 0
-    remaining: int = 0
+    remaining: int | None = 0
     error: str | None = None
     folders: tuple[str, ...] = field(default=())
 

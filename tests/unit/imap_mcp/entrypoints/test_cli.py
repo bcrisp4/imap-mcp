@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import sqlite3
 from typing import TYPE_CHECKING
 
 import pytest
 
 from imap_mcp.adapters.flock import FileLock
-from imap_mcp.adapters.sqlite.connection import open_database
+from imap_mcp.adapters.sqlite.connection import has_other_connections, open_database
 from imap_mcp.config import CONFIG_ENV
 from imap_mcp.entrypoints.cli import EXIT_BUSY, EXIT_ERROR, EXIT_OK, main
 
@@ -88,3 +89,17 @@ class TestRunningProcesses:
             assert main(["status"]) == EXIT_OK
         finally:
             sync.release()
+
+
+def test_the_purge_probe_leaves_the_database_in_wal_mode(tmp_path: Path) -> None:
+    db = tmp_path / "x.db"
+    open_database(db).close()
+
+    assert has_other_connections(db) is False
+
+    # A plain connection, because open_database would switch to WAL itself.
+    conn = sqlite3.connect(db)
+    try:
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+    finally:
+        conn.close()

@@ -13,7 +13,7 @@ import sqlite3
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Final
 
-from imap_mcp.adapters.sqlite.connection import write_transaction
+from imap_mcp.adapters.sqlite.connection import read_transaction, write_transaction
 from imap_mcp.adapters.sqlite.fts import build_match
 from imap_mcp.domain.enums import AuthVerdict, FolderRole, ParseState, SyncStateKind
 from imap_mcp.domain.errors import ImapMcpError
@@ -445,14 +445,17 @@ class SqliteIndex:
         match = build_match(query.text) if query.text else None
         if query.text and match is None:
             return SearchPage(total=0, hits=())
-        if match is not None:
-            params["match"] = match
-            rows = self._conn.execute(SEARCH_TEXT_SQL, params).fetchall()
-            total = self._conn.execute(_COUNT_TEXT, params).fetchone()[0]
-        else:
-            rows = self._conn.execute(SEARCH_ALL_SQL, params).fetchall()
-            total = self._conn.execute(_COUNT_ALL, params).fetchone()[0]
-        messages = {m.id: m for m in self._hydrate([row["id"] for row in rows])}
+        # One snapshot, so a concurrent sync cannot make the page, the total and
+        # the hydrated messages disagree.
+        with read_transaction(self._conn):
+            if match is not None:
+                params["match"] = match
+                rows = self._conn.execute(SEARCH_TEXT_SQL, params).fetchall()
+                total = self._conn.execute(_COUNT_TEXT, params).fetchone()[0]
+            else:
+                rows = self._conn.execute(SEARCH_ALL_SQL, params).fetchall()
+                total = self._conn.execute(_COUNT_ALL, params).fetchone()[0]
+            messages = {m.id: m for m in self._hydrate([row["id"] for row in rows])}
         hits = tuple(
             SearchHit(message=messages[row["id"]], snippet=_clip(row["snippet"]))
             for row in rows

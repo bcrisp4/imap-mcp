@@ -87,7 +87,7 @@ class TestDatabaseSetup:
         assert pragma("auto_vacuum") == 2  # incremental
         assert pragma("foreign_keys") == 1
         assert pragma("secure_delete") == 1
-        assert pragma("user_version") == 1
+        assert pragma("user_version") == 2
 
     def test_a_double_quoted_unknown_column_is_an_error(
         self, conn: sqlite3.Connection
@@ -96,7 +96,7 @@ class TestDatabaseSetup:
             conn.execute('SELECT "no_such_column" FROM messages')
 
     def test_migrating_twice_changes_nothing(self, conn: sqlite3.Connection) -> None:
-        assert migrate(conn) == 1
+        assert migrate(conn) == 2
 
 
 class TestSearch:

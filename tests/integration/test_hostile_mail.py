@@ -123,3 +123,18 @@ async def test_each_response_uses_a_new_nonce(
     assert first_nonce is not None
     assert second_nonce is not None
     assert first_nonce.group(1) != second_nonce.group(1)
+
+
+async def test_a_huge_recipient_list_is_capped(
+    server: MCPServer, imap_server: FakeImapServer
+) -> None:
+    recipients = ", ".join(f"user{n}@spam.example" for n in range(500))
+    imap_server.add_message("INBOX", make_message(subject="Newsletter", to=recipients))
+
+    (hit,) = (await call(server, "search_mail", query="newsletter"))["results"]
+    message = await call(server, "get_message", message_ref=hit["id"])
+
+    assert hit["to_count"] == 500
+    assert len(hit["untrusted"]["to"]) == 20
+    assert message["to_count"] == 500
+    assert len(message["untrusted"]["to"]) == 20
