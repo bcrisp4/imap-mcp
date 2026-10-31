@@ -1,0 +1,98 @@
+[project]
+name = "imap-mcp"
+version = "0.1.0"
+description = "Local, read-only MCP server with keyword search over one IMAP mailbox"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Ben Crisp", email = "ben@thecrisp.io" }]
+requires-python = ">=3.14"
+dependencies = [
+    "beautifulsoup4>=4.15",
+    "imapclient>=4.1",
+    "lxml>=6.1",
+    "markdown-it-py>=4.2",
+    "mcp>=2.3",
+    "pydantic>=2.14",
+    "structlog>=26.1",
+]
+
+[project.scripts]
+imap-mcp = "imap_mcp.entrypoints.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "anyio>=4.15",
+    "mypy>=2.4",
+    "pdoc>=16.0",
+    "pyright>=1.1.414",
+    "pytest>=9.2",
+    "pytest-asyncio>=1.4",
+    "pytest-cov>=7.1",
+    "ruff>=0.17",
+    "trustme>=1.2",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W", "I", "UP", "B", "SIM", "TC", "RUF", "PTH",
+    "ASYNC", "S", "T20", "ARG", "FBT", "A", "C4", "DTZ", "ISC",
+    "PIE", "RSE", "RET", "TID",
+]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# imap-mcp never sends mail. See docs/designs/imap-mcp.md, Security T1.
+"smtplib".msg = "imap-mcp must never send mail (design T1)."
+# Write methods of imapclient. The runtime guard also blocks these commands.
+"imapclient.IMAPClient.add_flags".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.set_flags".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.remove_flags".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.move".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.copy".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.delete_messages".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.expunge".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.uid_expunge".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.close_folder".msg = "CLOSE expunges (design T1)."
+"imapclient.IMAPClient.create_folder".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.delete_folder".msg = "Writes to the mailbox (design T1)."
+"imapclient.IMAPClient.rename_folder".msg = "Writes to the mailbox (design T1)."
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "ARG", "FBT", "PLR2004"]
+
+[tool.pyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+pythonVersion = "3.14"
+reportMissingTypeStubs = false
+
+[tool.mypy]
+strict = true
+python_version = "3.14"
+mypy_path = "src"
+packages = ["imap_mcp"]
+
+[[tool.mypy.overrides]]
+module = ["imapclient.*", "trustme.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+addopts = ["--strict-markers", "-ra", "--import-mode=importlib"]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
