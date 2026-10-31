@@ -105,7 +105,7 @@ Two secondary goals:
 | `create_draft` | `to`, `subject`, `body` (Markdown), `cc?`, `bcc?`, `in_reply_to?` | The draft's `Message-ID`, folder and `new_recipients`. The body becomes a `multipart/alternative` message: the Markdown source as `text/plain`, and HTML from CommonMark with raw HTML off and images rendered as links. |
 | `sync_now` | `folder?` | Sync result |
 
-Every result includes a `sync` object. The server marks `search_mail`, `get_message`, `list_folders` and `sync_now` with the MCP annotation `readOnlyHint: true`. `download_attachment` and `create_draft` write (a local file and a draft), so they carry `readOnlyHint: false` and `destructiveHint: false`. The `id` value in a result is a local message ID, which `get_message`, `download_attachment` and `create_draft` take as `message_ref` or `in_reply_to`. It stays valid until the index is rebuilt. Each result also carries the stable `message_id` header.
+Every result includes a `sync` object. The server marks `search_mail`, `get_message`, `list_folders` and `sync_now` with the MCP annotation `readOnlyHint: true`. `download_attachment` and `create_draft` write (a local file and a draft), so they carry `readOnlyHint: false` and `destructiveHint: false`. The `id` value in a result is a local message ID, which `get_message`, `download_attachment` and `create_draft` take as `message_ref` or `in_reply_to`. It stays valid until the index is rebuilt. Each result also carries the `Message-ID` header under `untrusted`.
 
 By default, `search_mail` skips the Junk and Trash folders (`\Junk` and `\Trash` by `SPECIAL-USE`, or `Junk` and `Deleted Messages` by name). If the agent names one of them in `folder`, the search covers it.
 
@@ -120,11 +120,8 @@ Sample `search_mail` result:
   "results": [
     {
       "id": 18234,
-      "message_id": "<a1b2c3@mail.example-insurer.co.uk>",
       "folders": ["Archive"],
       "date": "2026-02-14T09:12:00Z",
-      "from_address": "renewals@example-insurer.co.uk",
-      "to": ["ben@thecrisp.io"],
       "unread": false,
       "flagged": false,
       "auth": {"spf": "pass", "dkim": "pass", "dmarc": "pass"},
@@ -132,6 +129,9 @@ Sample `search_mail` result:
       "hidden_content_removed": false,
       "attachments": [{"part": "2", "type": "application/pdf", "size": 184220}],
       "untrusted": {
+        "message_id": "<a1b2c3@mail.example-insurer.co.uk>",
+        "from_address": "renewals@example-insurer.co.uk",
+        "to": ["ben@thecrisp.io"],
         "from_name": "Example Insurer",
         "subject": "Your car insurance renewal",
         "snippet": "<email-content nonce=\"7f3a9c\">...your policy [renews] on 1 March 2027. Your [car insurance] premium...</email-content nonce=\"7f3a9c\">",
@@ -321,7 +321,7 @@ Scenario: a message has a 50 MB HTML part, broken MIME, or text that breaks the 
 
 Scenario: an email contains text the agent reads as instructions. The text can be visible, hidden with CSS, or written in invisible Unicode.
 
-- Each result keeps server data and sender data apart. The server builds IDs, dates, flags, folders, sync state and authentication results. Subject, sender name, snippet, body and attachment names sit in one `untrusted` object. The `outputSchema` labels it as data. Text that the server writes never contains email content.
+- Each result keeps server data and sender data apart. The server builds IDs, dates, flags, folders, sync state and authentication results. Addresses, `Message-ID`, subject, sender name, snippet, body and attachment names sit in one `untrusted` object. The `outputSchema` labels it as data. Text that the server writes never contains email content.
 - The server wraps message text in a tag with a random nonce for each response, and removes any copy of that tag from the content. The MCP server `instructions` tell the agent that tagged text is data, not instructions.
 - The HTML-to-text step drops `<style>`, `<script>`, comments, and elements that CSS hides (`display:none`, `visibility:hidden`, `font-size:0`, `opacity:0`, `max-height:0` with `overflow:hidden`). The result then reports `hidden_content_removed: true`.
 - The server removes TAG-block characters (U+E0000 to U+E007F), bidi controls and zero-width spaces. It keeps ZWJ and ZWNJ.

@@ -74,7 +74,9 @@ class TestDatabaseSetup:
     def test_files_are_private_to_the_user(
         self, conn: sqlite3.Connection, db_path: Path
     ) -> None:
-        assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
+        for suffix in ("", "-wal", "-shm"):
+            path = db_path.with_name(db_path.name + suffix)
+            assert stat.S_IMODE(path.stat().st_mode) == 0o600, suffix
         assert stat.S_IMODE(db_path.parent.stat().st_mode) == 0o700
 
     def test_settings_match_appendix_b(self, conn: sqlite3.Connection) -> None:

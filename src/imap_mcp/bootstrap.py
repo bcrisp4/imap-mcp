@@ -14,7 +14,7 @@ from imap_mcp.adapters.imap.session import ImapMailSourceFactory
 from imap_mcp.adapters.keychain import KeychainCredentialSource
 from imap_mcp.adapters.sqlite.connection import open_database
 from imap_mcp.adapters.sqlite.index import SqliteIndex
-from imap_mcp.adapters.sqlite.schema import migrate
+from imap_mcp.adapters.sqlite.schema import migrate, needs_migration
 from imap_mcp.core.attachments import AttachmentService
 from imap_mcp.core.drafts import DraftService
 from imap_mcp.core.search import ReadService
@@ -40,12 +40,18 @@ def lock_path(config: Config) -> Path:
 
 
 def open_index(config: Config, lock: FileLock) -> SqliteIndex:
-    """Open the database and migrate it while holding the sync lock.
+    """Open the database, and migrate it under the sync lock if it is old.
+
+    The lock is taken only when a migration is pending. A sync can hold the
+    lock for hours during a backfill, and a current schema needs no lock.
 
     Raises:
-        ImapMcpError: If another process holds the lock for too long.
+        ImapMcpError: If a migration is pending and another process holds the
+            lock for too long.
     """
     conn = open_database(config.db_path)
+    if not needs_migration(conn):
+        return SqliteIndex(conn)
     if not lock.acquire(MIGRATION_WAIT_SECONDS):
         msg = "Another imap-mcp process holds the sync lock. Try again later."
         raise ImapMcpError(msg)
@@ -81,14 +87,7 @@ def build_services(
     lock = FileLock(lock_path(config))
     index = open_index(config, lock)
     clock = clock or SystemClock()
-    sources = ImapMailSourceFactory(
-        host=config.host,
-        port=config.port,
-        username=config.username,
-        credentials=credentials or KeychainCredentialSource(config.username),
-        drafts_folder=config.drafts_folder,
-        ssl_context=ssl_context,
-    )
+    sources = build_sources(config, credentials, ssl_context)
     sync = SyncService(
         index=index,
         sources=sources,
@@ -119,13 +118,25 @@ def build_services(
 
 
 def build_sources(
-    config: Config, credentials: CredentialSource | None = None
+    config: Config,
+    credentials: CredentialSource | None = None,
+    ssl_context: ssl.SSLContext | None = None,
 ) -> ImapMailSourceFactory:
-    """Build only the IMAP session factory, for `imap-mcp probe`."""
+    """Build the IMAP session factory. `imap-mcp probe` uses it on its own.
+
+    Args:
+        config: The validated config.
+        credentials: Replaces the Keychain. Only tests pass one.
+        ssl_context: Replaces the default TLS context. Only tests pass one.
+
+    Returns:
+        The factory.
+    """
     return ImapMailSourceFactory(
         host=config.host,
         port=config.port,
         username=config.username,
         credentials=credentials or KeychainCredentialSource(config.username),
         drafts_folder=config.drafts_folder,
+        ssl_context=ssl_context,
     )

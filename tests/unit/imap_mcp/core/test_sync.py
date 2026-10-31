@@ -207,7 +207,7 @@ class TestBudgetAndFreshness:
     ) -> None:  # fmt: skip
         for n in range(4):
             imap_server.add_message("INBOX", make_message(subject=f"M{n}"))
-        clock.step = 7.0
+        clock.step = 5.0
 
         make_sync(batch_size=1).sync_now()
 
@@ -316,3 +316,22 @@ class TestFlagFallbacks:
         assert report.flags_updated == 1
         (hit,) = index.search(SearchQuery(), ALL).hits
         assert hit.message.flagged is True
+
+
+class TestBudgetInsideABatch:
+    def test_the_budget_stops_a_large_batch_between_text_fetches(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+        index: SqliteIndex, clock: FakeClock,
+    ) -> None:  # fmt: skip
+        for n in range(25):
+            imap_server.add_message("INBOX", make_message(subject=f"M{n}"))
+        clock.step = 5.0  # the 20 s budget ends at the fifth clock read
+
+        report = make_sync(batch_size=50).sync_now()
+
+        assert report.kind is SyncStateKind.PARTIAL
+        assert report.new_messages == 10
+        assert report.remaining == 15
+        complete = make_sync(batch_size=50).full_sync()
+        assert complete.new_messages == 15
+        assert index.stats().messages == 25

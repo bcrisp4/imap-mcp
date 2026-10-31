@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Final
 from imap_mcp.adapters.sqlite.connection import write_transaction
 from imap_mcp.adapters.sqlite.fts import build_match
 from imap_mcp.domain.enums import AuthVerdict, FolderRole, ParseState, SyncStateKind
+from imap_mcp.domain.errors import ImapMcpError
 from imap_mcp.domain.model import (
     AttachmentInfo,
     AuthResults,
@@ -528,12 +529,27 @@ class SqliteIndex:
         )
 
     def vacuum(self) -> None:
-        """Rebuild the file and merge the full-text index segments."""
-        with write_transaction(self._conn):
-            self._conn.execute(
-                "INSERT INTO messages_fts (messages_fts) VALUES ('optimize')"
+        """Rebuild the file and merge the full-text index segments.
+
+        Raises:
+            ImapMcpError: If another connection keeps the database busy.
+        """
+        try:
+            with write_transaction(self._conn):
+                self._conn.execute(
+                    "INSERT INTO messages_fts (messages_fts) VALUES ('optimize')"
+                )
+            self._conn.execute("VACUUM")
+        except sqlite3.OperationalError as exc:
+            msg = (
+                "The database is busy. Quit the agents that run imap-mcp, then try"
+                f" again ({exc})."
             )
-        self._conn.execute("VACUUM")
+            raise ImapMcpError(msg) from exc
+
+    def close(self) -> None:
+        """Close the connection. CLI commands call this before they exit."""
+        self._conn.close()
 
     # -- helpers --------------------------------------------------------------------
 

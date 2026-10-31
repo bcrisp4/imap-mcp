@@ -202,6 +202,27 @@ def structure_from_message(msg: Message) -> tuple[MessageStructure, dict[str, by
     return MessageStructure(text_parts=chosen, attachments=tuple(attachments)), data
 
 
+def header_identity(fetched: FetchedHeader) -> str:
+    """Return the identity of a message from its header fetch alone.
+
+    The sync uses this to find moved messages before it fetches any text.
+
+    Args:
+        fetched: The header fetch result.
+
+    Returns:
+        The identity key, as `parse_message` computes it.
+    """
+    msg = message_from_bytes(fetched.header, policy=policy.compat32)
+    return message_identity(
+        message_id=_header(msg, "Message-ID").strip() or None,
+        date=_header(msg, "Date"),
+        sender=_header(msg, "From"),
+        subject=_header(msg, "Subject"),
+        size=fetched.size,
+    )
+
+
 def parse_message(
     fetched: FetchedHeader,
     texts: Mapping[str, bytes] | None,
@@ -244,13 +265,7 @@ def parse_message(
         state = ParseState.FAILED
         body = ""
     return ParsedMessage(
-        identity=message_identity(
-            message_id=message_id,
-            date=raw_date,
-            sender=raw_from,
-            subject=raw_subject,
-            size=fetched.size,
-        ),
+        identity=header_identity(fetched),
         message_id=message_id,
         date=_date(raw_date, fetched.internal_date),
         from_name=strip_invisible(name),

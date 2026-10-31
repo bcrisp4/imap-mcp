@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Final
 
 import structlog
 
-from imap_mcp.domain.content.parse import MAX_TEXT_BYTES, parse_message
+from imap_mcp.domain.content.parse import MAX_TEXT_BYTES, header_identity, parse_message
 from imap_mcp.domain.enums import FolderRole, SyncStateKind
 from imap_mcp.domain.errors import CredentialError, MailError
 from imap_mcp.domain.model import SyncReport, SyncState
@@ -37,6 +37,9 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 BATCH_SIZE: Final = 50
+TEXT_CHUNK_WITH_BUDGET: Final = 10
+"""Messages per text fetch when a time budget applies, so the engine can stop
+inside a batch instead of after up to 50 MB of text."""
 _ROLE_ORDER: Final = {
     FolderRole.INBOX: 0,
     FolderRole.SENT: 1,
@@ -287,7 +290,11 @@ class SyncService:
                 run.interrupted = True
                 run.remaining += len(new) - start
                 return
-            self._sync_batch(source, name, new[start : start + self._batch_size], run)
+            batch = new[start : start + self._batch_size]
+            self._sync_batch(source, name, batch, run)
+            if run.interrupted:
+                run.remaining += len(new) - start - len(batch)
+                return
             if self._progress is not None:
                 self._progress(name, min(start + self._batch_size, len(new)), len(new))
 
@@ -313,7 +320,11 @@ class SyncService:
         ):
             if status.highestmodseq == stored.highestmodseq:
                 return 0
-            changed = source.fetch_flags(uids, changed_since=stored.highestmodseq)
+            # CHANGEDSINCE filters on the server, so one closed range replaces
+            # a long explicit UID set. UIDs in the range that the index does
+            # not hold match no location and change nothing.
+            span = range(min(uids), max(uids) + 1)
+            changed = source.fetch_flags(span, changed_since=stored.highestmodseq)
             return self._index.update_flags(name, changed)
         if status.unseen != stored.unseen:
             # Without CONDSTORE, a flag change shows only as a new unread
@@ -325,24 +336,34 @@ class SyncService:
         self, source: MailSource, name: str, uids: Sequence[int], run: _Run
     ) -> None:
         headers = source.fetch_headers(uids)
-        first_pass = {h.uid: parse_message(h, None) for h in headers}
-        known = self._index.known_identities({p.identity for p in first_pass.values()})
+        identities = {h.uid: header_identity(h) for h in headers}
+        known = self._index.known_identities(set(identities.values()))
 
         links = [
-            (h.uid, h.flags, known[first_pass[h.uid].identity])
+            (h.uid, h.flags, known[identities[h.uid]])
             for h in headers
-            if first_pass[h.uid].identity in known
+            if identities[h.uid] in known
         ]
-        fresh = [h for h in headers if first_pass[h.uid].identity not in known]
-        parsed = self._fetch_and_parse(source, fresh)
+        fresh = [h for h in headers if identities[h.uid] not in known]
+        parsed, skipped = self._fetch_and_parse(source, fresh, run.deadline)
 
         run.linked += self._index.link_locations(name, links) if links else 0
         if parsed:
             run.new_messages += self._index.add_messages(name, parsed)
+        if skipped:
+            run.interrupted = True
+            run.remaining += skipped
 
     def _fetch_and_parse(
-        self, source: MailSource, headers: Sequence[FetchedHeader]
-    ) -> list[tuple[int, frozenset[str], ParsedMessage]]:
+        self, source: MailSource, headers: Sequence[FetchedHeader], deadline: float
+    ) -> tuple[list[tuple[int, frozenset[str], ParsedMessage]], int]:
+        """Fetch and parse new messages until the deadline.
+
+        Returns:
+            The parsed messages, and the number left unfetched because the
+            deadline passed. Those stay out of the index, so the next sync
+            fetches them.
+        """
         groups: dict[tuple[str, ...], list[tuple[FetchedHeader, MessageStructure]]] = {}
         whole: list[FetchedHeader] = []
         for header in headers:
@@ -352,25 +373,39 @@ class SyncService:
                 key = tuple(p.part for p in header.structure.text_parts)
                 groups.setdefault(key, []).append((header, header.structure))
 
-        out: list[tuple[int, frozenset[str], ParsedMessage]] = []
+        chunk = len(headers) or 1
+        if math.isfinite(deadline):
+            chunk = TEXT_CHUNK_WITH_BUDGET
+        work: list[tuple[list[FetchedHeader], MessageStructure | None]] = []
         for members in groups.values():
             group = [header for header, _ in members]
-            structure = members[0][1]
+            for i in range(0, len(group), chunk):
+                work.append((group[i : i + chunk], members[0][1]))
+        work.extend(([header], None) for header in whole)
+
+        out: list[tuple[int, frozenset[str], ParsedMessage]] = []
+        done = 0
+        for part, structure in work:
+            if self._clock.monotonic() >= deadline:
+                return out, len(headers) - done
+            done += len(part)
+            if structure is None:
+                (header,) = part
+                data = source.fetch_whole(header.uid, self._max_text_bytes)
+                parsed = parse_message(
+                    header, None, whole=data, max_bytes=self._max_text_bytes
+                )
+                out.append((header.uid, header.flags, parsed))
+                continue
             texts = (
-                source.fetch_text([h.uid for h in group], structure.text_parts,
+                source.fetch_text([h.uid for h in part], structure.text_parts,
                                   self._max_text_bytes)
                 if structure.text_parts
                 else {}
             )  # fmt: skip
-            for header in group:
+            for header in part:
                 parsed = parse_message(
                     header, texts.get(header.uid, {}), max_bytes=self._max_text_bytes
                 )
                 out.append((header.uid, header.flags, parsed))
-        for header in whole:
-            data = source.fetch_whole(header.uid, self._max_text_bytes)
-            parsed = parse_message(
-                header, None, whole=data, max_bytes=self._max_text_bytes
-            )
-            out.append((header.uid, header.flags, parsed))
-        return out
+        return out, 0

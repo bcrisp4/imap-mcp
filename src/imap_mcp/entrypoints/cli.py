@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Final
 
 from imap_mcp.adapters.flock import FileLock
 from imap_mcp.adapters.keychain import KeychainCredentialSource
+from imap_mcp.adapters.sqlite.connection import has_other_connections
 from imap_mcp.bootstrap import build_services, build_sources, lock_path, open_index
 from imap_mcp.config import load_config
 from imap_mcp.domain.enums import FolderRole, SyncStateKind
@@ -98,7 +99,9 @@ def cmd_status(config: Config) -> int:
     _say(f"Last sync: {state.kind.value}, success {state.last_success or 'never'}")
     if state.error:
         _say(f"Last error: {state.error}")
-    for folder in index.list_folders():
+    folders = index.list_folders()
+    index.close()
+    for folder in folders:
         _say(f"  {folder.name} [{folder.role.value}]: {folder.messages}"
              f" messages, {folder.unread} unread")  # fmt: skip
     return EXIT_OK
@@ -150,7 +153,9 @@ def cmd_vacuum(config: Config) -> int:
         index.vacuum()
     finally:
         lock.release()
-    _say(f"Vacuumed: {_size(size)} -> {_size(index.stats().file_bytes)}")
+    after = index.stats().file_bytes
+    index.close()
+    _say(f"Vacuumed: {_size(size)} -> {_size(after)}")
     return EXIT_OK
 
 
@@ -161,9 +166,12 @@ def cmd_purge(config: Config, *, confirmed: bool) -> int:
         return EXIT_ERROR
     lock = FileLock(lock_path(config))
     if not lock.try_acquire():
-        _say("Another imap-mcp process is running. Stop it first.")
+        _say("Another imap-mcp process is syncing. Try again later.")
         return EXIT_BUSY
     try:
+        if has_other_connections(config.db_path):
+            _say("Another imap-mcp process has the index open. Quit those agents.")
+            return EXIT_BUSY
         for suffix in ("", "-wal", "-shm"):
             config.db_path.with_name(config.db_path.name + suffix).unlink(
                 missing_ok=True

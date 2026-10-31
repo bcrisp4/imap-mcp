@@ -34,6 +34,9 @@
                     <a class="variable" href="#MIGRATIONS">MIGRATIONS</a>
             </li>
             <li>
+                    <a class="function" href="#needs_migration">needs_migration</a>
+            </li>
+            <li>
                     <a class="function" href="#migrate">migrate</a>
             </li>
     </ul>
@@ -183,37 +186,42 @@ processes that start together cannot migrate at the same time.</p>
 </span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a><span class="sd">"""Migration N takes the database from `user_version` N to N + 1."""</span>
 </span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>
 </span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>
-</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="k">def</span><span class="w"> </span><span class="nf">migrate</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a><span class="w">    </span><span class="sd">"""Bring the schema up to date.</span>
-</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>
-</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="sd">    The caller must hold the sync lock.</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="k">def</span><span class="w"> </span><span class="nf">needs_migration</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a><span class="w">    </span><span class="sd">"""Return True if the schema is older than this code."""</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA user_version"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">)</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>
 </span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>
-</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="sd">    Args:</span>
-</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="k">def</span><span class="w"> </span><span class="nf">migrate</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="w">    </span><span class="sd">"""Bring the schema up to date.</span>
 </span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>
-</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">    Returns:</span>
-</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a><span class="sd">        The schema version after migration.</span>
-</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a><span class="sd">    """</span>
-</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>    <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA user_version"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
-</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>    <span class="k">for</span> <span class="n">target</span><span class="p">,</span> <span class="n">script</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">[</span><span class="n">version</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="n">version</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>        <span class="k">with</span> <span class="n">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">):</span>
-</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>            <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">_statements</span><span class="p">(</span><span class="n">script</span><span class="p">):</span>
-</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
-</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PRAGMA user_version = </span><span class="si">{</span><span class="n">target</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">)</span>
-</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>
-</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>
-</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_statements</span><span class="p">(</span><span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a><span class="w">    </span><span class="sd">"""Split a script on `;` at line ends, keeping trigger bodies whole."""</span>
-</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>    <span class="n">statements</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>    <span class="n">current</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">script</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
-</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a>        <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
-</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a>        <span class="n">text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a>        <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">";"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">complete_statement</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
-</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>            <span class="n">statements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a>            <span class="n">current</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>    <span class="k">return</span> <span class="n">statements</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">    The caller must hold the sync lock.</span>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a><span class="sd">    Args:</span>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a><span class="sd">    Returns:</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a><span class="sd">        The schema version after migration.</span>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a><span class="sd">    """</span>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>    <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA user_version"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="k">for</span> <span class="n">target</span><span class="p">,</span> <span class="n">script</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">[</span><span class="n">version</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="n">version</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>        <span class="k">with</span> <span class="n">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">):</span>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>            <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">_statements</span><span class="p">(</span><span class="n">script</span><span class="p">):</span>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PRAGMA user_version = </span><span class="si">{</span><span class="n">target</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">)</span>
+</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>
+</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>
+</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_statements</span><span class="p">(</span><span class="n">script</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a><span class="w">    </span><span class="sd">"""Split a script on `;` at line ends, keeping trigger bodies whole."""</span>
+</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a>    <span class="n">statements</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>    <span class="n">current</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a>    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">script</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>        <span class="n">current</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a>        <span class="n">text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">current</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>        <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">";"</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">complete_statement</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
+</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>            <span class="n">statements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a>            <span class="n">current</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-157"><a href="#L-157"><span class="linenos">157</span></a>    <span class="k">return</span> <span class="n">statements</span>
 </span></pre></div>
 
 
@@ -233,6 +241,28 @@ processes that start together cannot migrate at the same time.</p>
 
 
                 </section>
+                <section id="needs_migration">
+                            <input id="needs_migration-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">needs_migration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
+
+                <label class="view-source-button" for="needs_migration-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#needs_migration"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="needs_migration-123"><a href="#needs_migration-123"><span class="linenos">123</span></a><span class="k">def</span><span class="w"> </span><span class="nf">needs_migration</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="needs_migration-124"><a href="#needs_migration-124"><span class="linenos">124</span></a><span class="w">    </span><span class="sd">"""Return True if the schema is older than this code."""</span>
+</span><span id="needs_migration-125"><a href="#needs_migration-125"><span class="linenos">125</span></a>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA user_version"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Return True if the schema is older than this code.</p>
+</div>
+
+
+                </section>
                 <section id="migrate">
                             <input id="migrate-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
@@ -244,24 +274,24 @@ processes that start together cannot migrate at the same time.</p>
 
     </div>
     <a class="headerlink" href="#migrate"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="migrate-123"><a href="#migrate-123"><span class="linenos">123</span></a><span class="k">def</span><span class="w"> </span><span class="nf">migrate</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="migrate-124"><a href="#migrate-124"><span class="linenos">124</span></a><span class="w">    </span><span class="sd">"""Bring the schema up to date.</span>
-</span><span id="migrate-125"><a href="#migrate-125"><span class="linenos">125</span></a>
-</span><span id="migrate-126"><a href="#migrate-126"><span class="linenos">126</span></a><span class="sd">    The caller must hold the sync lock.</span>
-</span><span id="migrate-127"><a href="#migrate-127"><span class="linenos">127</span></a>
-</span><span id="migrate-128"><a href="#migrate-128"><span class="linenos">128</span></a><span class="sd">    Args:</span>
-</span><span id="migrate-129"><a href="#migrate-129"><span class="linenos">129</span></a><span class="sd">        conn: An autocommit connection.</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="migrate-128"><a href="#migrate-128"><span class="linenos">128</span></a><span class="k">def</span><span class="w"> </span><span class="nf">migrate</span><span class="p">(</span><span class="n">conn</span><span class="p">:</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Connection</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+</span><span id="migrate-129"><a href="#migrate-129"><span class="linenos">129</span></a><span class="w">    </span><span class="sd">"""Bring the schema up to date.</span>
 </span><span id="migrate-130"><a href="#migrate-130"><span class="linenos">130</span></a>
-</span><span id="migrate-131"><a href="#migrate-131"><span class="linenos">131</span></a><span class="sd">    Returns:</span>
-</span><span id="migrate-132"><a href="#migrate-132"><span class="linenos">132</span></a><span class="sd">        The schema version after migration.</span>
-</span><span id="migrate-133"><a href="#migrate-133"><span class="linenos">133</span></a><span class="sd">    """</span>
-</span><span id="migrate-134"><a href="#migrate-134"><span class="linenos">134</span></a>    <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA user_version"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
-</span><span id="migrate-135"><a href="#migrate-135"><span class="linenos">135</span></a>    <span class="k">for</span> <span class="n">target</span><span class="p">,</span> <span class="n">script</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">[</span><span class="n">version</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="n">version</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
-</span><span id="migrate-136"><a href="#migrate-136"><span class="linenos">136</span></a>        <span class="k">with</span> <span class="n">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">):</span>
-</span><span id="migrate-137"><a href="#migrate-137"><span class="linenos">137</span></a>            <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">_statements</span><span class="p">(</span><span class="n">script</span><span class="p">):</span>
-</span><span id="migrate-138"><a href="#migrate-138"><span class="linenos">138</span></a>                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
-</span><span id="migrate-139"><a href="#migrate-139"><span class="linenos">139</span></a>            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PRAGMA user_version = </span><span class="si">{</span><span class="n">target</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="migrate-140"><a href="#migrate-140"><span class="linenos">140</span></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">)</span>
+</span><span id="migrate-131"><a href="#migrate-131"><span class="linenos">131</span></a><span class="sd">    The caller must hold the sync lock.</span>
+</span><span id="migrate-132"><a href="#migrate-132"><span class="linenos">132</span></a>
+</span><span id="migrate-133"><a href="#migrate-133"><span class="linenos">133</span></a><span class="sd">    Args:</span>
+</span><span id="migrate-134"><a href="#migrate-134"><span class="linenos">134</span></a><span class="sd">        conn: An autocommit connection.</span>
+</span><span id="migrate-135"><a href="#migrate-135"><span class="linenos">135</span></a>
+</span><span id="migrate-136"><a href="#migrate-136"><span class="linenos">136</span></a><span class="sd">    Returns:</span>
+</span><span id="migrate-137"><a href="#migrate-137"><span class="linenos">137</span></a><span class="sd">        The schema version after migration.</span>
+</span><span id="migrate-138"><a href="#migrate-138"><span class="linenos">138</span></a><span class="sd">    """</span>
+</span><span id="migrate-139"><a href="#migrate-139"><span class="linenos">139</span></a>    <span class="n">version</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">"PRAGMA user_version"</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+</span><span id="migrate-140"><a href="#migrate-140"><span class="linenos">140</span></a>    <span class="k">for</span> <span class="n">target</span><span class="p">,</span> <span class="n">script</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">[</span><span class="n">version</span><span class="p">:],</span> <span class="n">start</span><span class="o">=</span><span class="n">version</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+</span><span id="migrate-141"><a href="#migrate-141"><span class="linenos">141</span></a>        <span class="k">with</span> <span class="n">write_transaction</span><span class="p">(</span><span class="n">conn</span><span class="p">):</span>
+</span><span id="migrate-142"><a href="#migrate-142"><span class="linenos">142</span></a>            <span class="k">for</span> <span class="n">statement</span> <span class="ow">in</span> <span class="n">_statements</span><span class="p">(</span><span class="n">script</span><span class="p">):</span>
+</span><span id="migrate-143"><a href="#migrate-143"><span class="linenos">143</span></a>                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">statement</span><span class="p">)</span>
+</span><span id="migrate-144"><a href="#migrate-144"><span class="linenos">144</span></a>            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">"PRAGMA user_version = </span><span class="si">{</span><span class="n">target</span><span class="si">:</span><span class="s2">d</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="migrate-145"><a href="#migrate-145"><span class="linenos">145</span></a>    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">MIGRATIONS</span><span class="p">)</span>
 </span></pre></div>
 
 

@@ -119,6 +119,11 @@ MIGRATIONS: Final = (_V1,)
 """Migration N takes the database from `user_version` N to N + 1."""
 
 
+def needs_migration(conn: sqlite3.Connection) -> bool:
+    """Return True if the schema is older than this code."""
+    return int(conn.execute("PRAGMA user_version").fetchone()[0]) < len(MIGRATIONS)
+
+
 def migrate(conn: sqlite3.Connection) -> int:
     """Bring the schema up to date.
 

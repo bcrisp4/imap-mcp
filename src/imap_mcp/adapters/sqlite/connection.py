@@ -55,11 +55,38 @@ def open_database(path: Path) -> sqlite3.Connection:
         conn.execute("PRAGMA auto_vacuum = INCREMENTAL")
     for pragma in _PRAGMAS:
         conn.execute(pragma)
+    # A read in WAL mode creates the -wal and -shm files now, so the chmod
+    # below covers them. Created later, they would get the process umask.
+    conn.execute("SELECT count(*) FROM sqlite_master").fetchone()
     for suffix in ("", "-wal", "-shm"):
         candidate = path.with_name(path.name + suffix)
         if candidate.exists():
             candidate.chmod(_FILE_MODE)
     return conn
+
+
+def has_other_connections(path: Path) -> bool:
+    """Return True if another connection has the database open.
+
+    Leaving WAL mode needs the only connection to the file, so a refused switch
+    means another process (an idle MCP server, for example) still has it open.
+
+    Args:
+        path: The database file.
+
+    Returns:
+        True if another connection holds the file open.
+    """
+    if not path.exists():
+        return False
+    conn = sqlite3.connect(path, autocommit=True, timeout=0)
+    try:
+        mode = conn.execute("PRAGMA journal_mode = DELETE").fetchone()[0]
+    except sqlite3.OperationalError:
+        return True
+    finally:
+        conn.close()
+    return str(mode).lower() != "delete"
 
 
 @contextlib.contextmanager
