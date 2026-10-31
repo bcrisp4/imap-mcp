@@ -50,8 +50,8 @@ class MailSource(Protocol):
         """Return the STATUS values of a folder without opening it."""
         ...
 
-    def examine(self, folder: str) -> FolderStatus:
-        """Open a folder read-only and return its status."""
+    def examine(self, folder: str) -> int:
+        """Open a folder read-only and return its UIDVALIDITY."""
         ...
 
     def search_uids(self) -> list[int]:

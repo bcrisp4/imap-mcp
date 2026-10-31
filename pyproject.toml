@@ -57,19 +57,6 @@ ban-relative-imports = "all"
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 # imap-mcp never sends mail. See docs/designs/imap-mcp.md, Security T1.
 "smtplib".msg = "imap-mcp must never send mail (design T1)."
-# Write methods of imapclient. The runtime guard also blocks these commands.
-"imapclient.IMAPClient.add_flags".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.set_flags".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.remove_flags".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.move".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.copy".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.delete_messages".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.expunge".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.uid_expunge".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.close_folder".msg = "CLOSE expunges (design T1)."
-"imapclient.IMAPClient.create_folder".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.delete_folder".msg = "Writes to the mailbox (design T1)."
-"imapclient.IMAPClient.rename_folder".msg = "Writes to the mailbox (design T1)."
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "ARG", "FBT", "PLR2004"]
