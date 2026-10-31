@@ -11,9 +11,10 @@ styles and the `hidden` attribute are.
 from __future__ import annotations
 
 import re
+import warnings
 from typing import Final
 
-from bs4 import BeautifulSoup, Comment, Tag
+from bs4 import BeautifulSoup, Comment, Tag, XMLParsedAsHTMLWarning
 
 _DROP_TAGS: Final = frozenset(
     {"head", "style", "script", "noscript", "template", "title", "meta", "link"}
@@ -82,7 +83,11 @@ def html_to_text(html: str) -> tuple[str, bool]:
 
 
 def _convert(html: str) -> tuple[str, bool]:
-    soup = BeautifulSoup(html, "lxml")
+    with warnings.catch_warnings():
+        # XHTML mail starts with an XML declaration. A mail client renders it
+        # as HTML, so parsing it as HTML is correct, not a mistake to report.
+        warnings.simplefilter("ignore", XMLParsedAsHTMLWarning)
+        soup = BeautifulSoup(html, "lxml")
     for comment in soup.find_all(string=lambda s: isinstance(s, Comment)):
         comment.extract()
     for tag in soup.find_all(list(_DROP_TAGS)):

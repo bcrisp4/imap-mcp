@@ -82,3 +82,18 @@ class TestLinksAndLayout:
         text, _ = html_to_text("<p>One</p><ul><li>a</li><li>b</li></ul><div>Two</div>")
 
         assert text == "One\n\n- a\n\n- b\n\nTwo"
+
+
+class TestXhtml:
+    def test_xhtml_mail_converts_without_a_warning(
+        self, recwarn: pytest.WarningsRecorder
+    ) -> None:
+        xhtml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Receipt</p></body></html>'
+        )
+
+        text, _ = html_to_text(xhtml)
+
+        assert text == "Receipt"
+        assert len(recwarn) == 0
