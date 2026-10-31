@@ -96,6 +96,7 @@ def build_services(
         interval=timedelta(minutes=config.sync_interval_minutes),
         budget_seconds=float(config.sync_budget_seconds),
         exclude_folders=config.exclude_folders,
+        auth_servers=config.auth_servers,
         progress=progress,
     )
     return Services(

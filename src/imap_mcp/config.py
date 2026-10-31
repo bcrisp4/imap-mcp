@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from imap_mcp.domain.content.auth import DEFAULT_AUTH_SERVERS
 from imap_mcp.domain.errors import ConfigError
 
 if TYPE_CHECKING:
@@ -47,6 +48,7 @@ class Config(BaseModel):
     db_path: Path = Path(DEFAULT_DB_PATH)
     drafts_folder: str = ""
     exclude_folders: tuple[str, ...] = ()
+    auth_servers: tuple[str, ...] = Field(default=DEFAULT_AUTH_SERVERS, min_length=1)
 
     @field_validator("download_dir", "db_path", mode="after")
     @classmethod

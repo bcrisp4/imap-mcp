@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Final
 
 import structlog
 
+from imap_mcp.domain.content.auth import DEFAULT_AUTH_SERVERS
 from imap_mcp.domain.content.parse import MAX_TEXT_BYTES, header_identity, parse_message
 from imap_mcp.domain.enums import FolderRole, SyncStateKind
 from imap_mcp.domain.errors import CredentialError, MailError, NotFoundError
@@ -81,6 +82,7 @@ class SyncService:
         exclude_folders: Collection[str] = (),
         batch_size: int = BATCH_SIZE,
         max_text_bytes: int = MAX_TEXT_BYTES,
+        auth_servers: Sequence[str] = DEFAULT_AUTH_SERVERS,
         progress: Callable[[str, int, int], None] | None = None,
     ) -> None:
         """Create the service.
@@ -95,6 +97,7 @@ class SyncService:
             exclude_folders: Folders never to sync.
             batch_size: Messages fetched and written together.
             max_text_bytes: The text fetch cap for each message.
+            auth_servers: Domains whose `Authentication-Results` headers count.
             progress: Called with (folder, done, total) during a sync.
         """
         self._index = index
@@ -106,6 +109,7 @@ class SyncService:
         self._exclude = frozenset(exclude_folders)
         self._batch_size = batch_size
         self._max_text_bytes = max_text_bytes
+        self._auth_servers = tuple(auth_servers)
         self._progress = progress
 
     # -- entry points -----------------------------------------------------------
@@ -414,7 +418,11 @@ class SyncService:
                 (header,) = part
                 data = source.fetch_whole(header.uid, self._max_text_bytes)
                 parsed = parse_message(
-                    header, None, whole=data, max_bytes=self._max_text_bytes
+                    header,
+                    None,
+                    whole=data,
+                    max_bytes=self._max_text_bytes,
+                    auth_servers=self._auth_servers,
                 )
                 out.append((header.uid, header.flags, parsed))
                 continue
@@ -426,7 +434,10 @@ class SyncService:
             )  # fmt: skip
             for header in part:
                 parsed = parse_message(
-                    header, texts.get(header.uid, {}), max_bytes=self._max_text_bytes
+                    header,
+                    texts.get(header.uid, {}),
+                    max_bytes=self._max_text_bytes,
+                    auth_servers=self._auth_servers,
                 )
                 out.append((header.uid, header.flags, parsed))
         return out, 0

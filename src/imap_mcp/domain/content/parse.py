@@ -16,7 +16,7 @@ from email.header import decode_header, make_header
 from email.utils import getaddresses, parseaddr, parsedate_to_datetime
 from typing import TYPE_CHECKING, Final, cast
 
-from imap_mcp.domain.content.auth import parse_auth_results
+from imap_mcp.domain.content.auth import DEFAULT_AUTH_SERVERS, parse_auth_results
 from imap_mcp.domain.content.html import html_to_text
 from imap_mcp.domain.content.identity import message_identity
 from imap_mcp.domain.content.sanitize import strip_invisible
@@ -30,7 +30,7 @@ from imap_mcp.domain.model import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Iterator, Mapping, Sequence
     from email.message import Message
 
 MAX_TEXT_BYTES: Final = 1024 * 1024
@@ -229,6 +229,7 @@ def parse_message(
     *,
     whole: bytes | None = None,
     max_bytes: int = MAX_TEXT_BYTES,
+    auth_servers: Sequence[str] = DEFAULT_AUTH_SERVERS,
 ) -> ParsedMessage:
     """Parse one message for the index.
 
@@ -239,6 +240,8 @@ def parse_message(
         whole: The first `max_bytes` of the whole message, when the structure
             was not known.
         max_bytes: The fetch cap.
+        auth_servers: Domains of the receiving server, whose
+            `Authentication-Results` headers count.
 
     Returns:
         The parsed message. Never raises.
@@ -277,7 +280,8 @@ def parse_message(
         text_truncated=truncated,
         hidden_content_removed=hidden,
         auth=parse_auth_results(
-            [str(v) for v in msg.get_all("Authentication-Results") or []]
+            [str(v) for v in msg.get_all("Authentication-Results") or []],
+            auth_servers,
         ),
         in_reply_to=_header(msg, "In-Reply-To").strip() or None,
         references=_ids(_header(msg, "References")),
