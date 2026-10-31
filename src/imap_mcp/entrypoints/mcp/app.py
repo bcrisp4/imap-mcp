@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import threading
 from datetime import UTC, date, datetime
+from importlib.metadata import version
 from typing import TYPE_CHECKING, Annotated, Final
 
 from mcp.server.mcpserver import MCPServer
@@ -82,7 +83,9 @@ def build_server(services: Services) -> MCPServer:
     Returns:
         The server, ready for `run()`.
     """
-    server = MCPServer(name="imap-mcp", instructions=INSTRUCTIONS)
+    server = MCPServer(
+        name="imap-mcp", version=version("imap-mcp"), instructions=INSTRUCTIONS
+    )
     lock = threading.Lock()
 
     def call[T](fn: Callable[[], T]) -> T:
