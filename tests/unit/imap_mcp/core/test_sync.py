@@ -132,6 +132,30 @@ class TestIncrementalSync:
         assert not any("BODY.PEEK[1]" in c for c in commands_since(imap_server, start))
         assert subjects(index, folder="Archive") == ["Moving"]
 
+    @pytest.mark.parametrize("arrival", ["later", "same-batch"])
+    def test_a_forged_copy_of_a_known_message_is_not_merged_into_it(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+        index: SqliteIndex, arrival: str,
+    ) -> None:  # fmt: skip
+        headers = {"message_id": "<invoice@bank.example>", "subject": "Invoice"}
+        genuine = make_message(
+            **headers, attachments=[("invoice.pdf", "application/pdf", b"GENUINE")]
+        )
+        forged = make_message(
+            **headers, attachments=[("invoice.pdf", "application/pdf", b"FORGED" * 10)]
+        )
+        sync = make_sync()
+        imap_server.add_message("Archive", genuine)
+        if arrival == "later":
+            sync.full_sync()
+        imap_server.add_message("INBOX", forged)
+
+        sync.full_sync()
+
+        assert index.stats().messages == 2
+        assert subjects(index, folder="INBOX") == ["Invoice"]
+        assert subjects(index, folder="Archive") == ["Invoice"]
+
     def test_a_flag_change_arrives_through_changedsince(
         self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
         index: SqliteIndex,

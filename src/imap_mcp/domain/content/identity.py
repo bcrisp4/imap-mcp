@@ -16,8 +16,12 @@ def message_identity(
     """Return the identity of a message.
 
     `Message-ID` alone is not enough: some senders reuse one ID for different
-    messages. So the key also covers the raw `Date` and `From` headers. A
-    message without a `Message-ID` also uses its subject and size.
+    messages. So the key also covers the raw `Date` and `From` headers and the
+    size. All headers are sender-controlled, so a sender can copy them from a
+    real message. The size, which includes the headers the receiving server
+    added, keeps such a copy from merging into the real message. A move or
+    copy on the server keeps the size. A message without a `Message-ID` also
+    uses its subject.
 
     Args:
         message_id: The `Message-ID` header, or None.
@@ -30,7 +34,9 @@ def message_identity(
         A hex SHA-256 digest.
     """
     if message_id and message_id.strip():
-        parts = ["mid", message_id.strip().lower(), date.strip(), sender.strip()]
+        parts = [
+            "mid", message_id.strip().lower(), date.strip(), sender.strip(), str(size)
+        ]  # fmt: skip
     else:
         parts = ["nomid", date.strip(), sender.strip(), subject.strip(), str(size)]
     return hashlib.sha256(
