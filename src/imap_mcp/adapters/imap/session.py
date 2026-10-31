@@ -96,6 +96,7 @@ class ImapMailSource:
         self._client = client
         self._guard = guard
         self._capabilities: frozenset[str] | None = None
+        self._drafts = ""
 
     def capabilities(self) -> frozenset[str]:
         """Return the post-login capabilities, upper case."""
@@ -222,18 +223,20 @@ class ImapMailSource:
         return headers
 
     def fetch_text(
-        self, uid: int, parts: Sequence[TextPart], max_bytes: int
-    ) -> dict[str, bytes]:
-        """Return each text part's encoded bytes, capped at `max_bytes`."""
-        if not parts:
+        self, uids: Collection[int], parts: Sequence[TextPart], max_bytes: int
+    ) -> dict[int, dict[str, bytes]]:
+        """Return text part bytes by UID and part, each capped at `max_bytes`."""
+        if not parts or not uids:
             return {}
         items = [f"BODY.PEEK[{p.part}]<0.{max_bytes}>" for p in parts]
-        item = self._fetch([uid], items).get(uid, {})
-        out: dict[str, bytes] = {}
-        for p in parts:
-            data = _find_section(item, f"BODY[{p.part}]")
-            if data is not None:
-                out[p.part] = bytes(data)
+        out: dict[int, dict[str, bytes]] = {}
+        for uid, item in self._fetch(uids, items).items():
+            found: dict[str, bytes] = {}
+            for p in parts:
+                data = _find_section(item, f"BODY[{p.part}]")
+                if data is not None:
+                    found[p.part] = bytes(data)
+            out[uid] = found
         return out
 
     def fetch_whole(self, uid: int, max_bytes: int) -> bytes:
@@ -264,6 +267,15 @@ class ImapMailSource:
         if data is None:
             raise MailError("IMAP UID FETCH returned no data for that part")
         return bytes(data)
+
+    def drafts_folder(self) -> str:
+        """Return the Drafts folder that the guard allows for APPEND."""
+        return self._drafts
+
+    def set_drafts_folder(self, name: str) -> None:
+        """Allow APPEND to this folder only, at the guard and here."""
+        self._drafts = name
+        self._guard.allow_drafts_folder(name)
 
     def append_draft(self, folder: str, message: bytes) -> None:
         """Store a message in the Drafts folder with the `\\Draft` flag."""
@@ -333,7 +345,7 @@ class ImapMailSourceFactory:
             with _mail_errors("LOGIN"):
                 client.login(self._username, password)
             source = ImapMailSource(client, guard)
-            guard.allow_drafts_folder(self._resolve_drafts(source))
+            source.set_drafts_folder(self._resolve_drafts(source))
             yield source
         finally:
             with contextlib.suppress(*_TRANSPORT_ERRORS):

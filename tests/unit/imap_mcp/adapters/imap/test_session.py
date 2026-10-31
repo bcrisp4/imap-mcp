@@ -147,9 +147,9 @@ class TestFetch:
             source.examine("INBOX")
             (header,) = source.fetch_headers([uid])
             assert header.structure is not None
-            texts = source.fetch_text(uid, header.structure.text_parts, 100)
+            texts = source.fetch_text([uid], header.structure.text_parts, 100)
 
-        assert len(texts["1"]) == 100
+        assert len(texts[uid]["1"]) == 100
 
     def test_an_unsolicited_flag_update_does_not_land_on_another_uid(
         self,

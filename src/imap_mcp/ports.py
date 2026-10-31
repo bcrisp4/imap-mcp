@@ -68,9 +68,12 @@ class MailSource(Protocol):
         ...
 
     def fetch_text(
-        self, uid: int, parts: Sequence[TextPart], max_bytes: int
-    ) -> dict[str, bytes]:
-        """Return the encoded bytes of text parts, each capped at `max_bytes`."""
+        self, uids: Collection[int], parts: Sequence[TextPart], max_bytes: int
+    ) -> dict[int, dict[str, bytes]]:
+        """Return text part bytes, by UID then part, each capped at `max_bytes`.
+
+        Every UID must have the same part numbers, so one command serves all.
+        """
         ...
 
     def fetch_whole(self, uid: int, max_bytes: int) -> bytes:
@@ -85,6 +88,10 @@ class MailSource(Protocol):
 
     def fetch_part(self, uid: int, part: str) -> bytes:
         """Return the encoded bytes of one MIME part."""
+        ...
+
+    def drafts_folder(self) -> str:
+        """Return the Drafts folder name, or "" if the server has none."""
         ...
 
     def append_draft(self, folder: str, message: bytes) -> None:
@@ -171,6 +178,10 @@ class Index(Protocol):
         """Delete folders, and their locations, not in `names`."""
         ...
 
+    def folder_uidvalidity(self, folder: str) -> int | None:
+        """Return the UIDVALIDITY that the folder's stored UIDs belong to."""
+        ...
+
     def folder_uids(self, folder: str) -> set[int]:
         """Return the UIDs the index holds for a folder."""
         ...
@@ -179,8 +190,15 @@ class Index(Protocol):
         """Delete locations that the server no longer has."""
         ...
 
-    def clear_folder(self, folder: str) -> None:
-        """Delete every location of a folder and mark it for resync."""
+    def bind_uidvalidity(self, folder: str, role: FolderRole, uidvalidity: int) -> bool:
+        """Record the UIDVALIDITY that the folder's locations belong to.
+
+        If the stored value differs, delete every location of the folder and
+        mark it for resync, because its UIDs now name other messages.
+
+        Returns:
+            True if the value changed and the locations were deleted.
+        """
         ...
 
     def known_identities(self, identities: Collection[str]) -> dict[str, int]:

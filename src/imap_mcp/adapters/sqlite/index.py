@@ -217,6 +217,13 @@ class SqliteIndex:
             )
             return cursor.rowcount
 
+    def folder_uidvalidity(self, folder: str) -> int | None:
+        """Return the UIDVALIDITY that the folder's stored UIDs belong to."""
+        row = self._conn.execute(
+            "SELECT uidvalidity FROM folders WHERE name = ?", (folder,)
+        ).fetchone()
+        return None if row is None else row["uidvalidity"]
+
     def folder_uids(self, folder: str) -> set[int]:
         """Return the UIDs the index holds for a folder."""
         rows = self._conn.execute(
@@ -241,18 +248,36 @@ class SqliteIndex:
             )
             return cursor.rowcount
 
-    def clear_folder(self, folder: str) -> None:
-        """Delete every location of a folder and mark it for resync."""
+    def bind_uidvalidity(self, folder: str, role: FolderRole, uidvalidity: int) -> bool:
+        """Record the UIDVALIDITY that the folder's locations belong to.
+
+        A changed value deletes the folder's locations at once and leaves the
+        folder unsynced. The folder status is stored only after the folder
+        sync completes, so an interrupted relink resumes on the next run.
+        """
         with write_transaction(self._conn):
-            self._conn.execute(
-                "DELETE FROM locations WHERE folder_id ="
-                " (SELECT id FROM folders WHERE name = ?)",
-                (folder,),
+            row = self._conn.execute(
+                "SELECT id, uidvalidity FROM folders WHERE name = ?", (folder,)
+            ).fetchone()
+            if row is None:
+                self._conn.execute(
+                    "INSERT INTO folders (name, role, uidvalidity) VALUES (?, ?, ?)",
+                    (folder, role.value, uidvalidity),
+                )
+                return False
+            changed = (
+                row["uidvalidity"] is not None and row["uidvalidity"] != uidvalidity
             )
+            if changed:
+                self._conn.execute(
+                    "DELETE FROM locations WHERE folder_id = ?", (row["id"],)
+                )
             self._conn.execute(
-                "UPDATE folders SET synced = 0, uidvalidity = NULL WHERE name = ?",
-                (folder,),
+                "UPDATE folders SET role = ?, uidvalidity = ?,"
+                " synced = CASE WHEN ? THEN 0 ELSE synced END WHERE id = ?",
+                (role.value, uidvalidity, int(changed), row["id"]),
             )
+            return changed
 
     def folders_with_role(self, roles: Collection[FolderRole]) -> list[str]:
         """Return the names of folders with any of these roles."""

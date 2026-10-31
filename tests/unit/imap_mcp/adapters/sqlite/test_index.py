@@ -181,12 +181,16 @@ class TestCopiesAndDeletes:
         assert search(index, text="ephemeral") == []
         assert index.stats().messages == 0
 
-    def test_clear_folder_marks_it_for_resync(self, index: SqliteIndex) -> None:
+    def test_a_new_uidvalidity_drops_locations_and_marks_resync(
+        self, index: SqliteIndex
+    ) -> None:
+        index.bind_uidvalidity("INBOX", FolderRole.INBOX, 5)
         status = FolderStatus(messages=1, uidnext=2, uidvalidity=5, unseen=0)
-        index.save_folder("INBOX", FolderRole.INBOX, status)
         add(index, "INBOX", 1, make_parsed())
+        index.save_folder("INBOX", FolderRole.INBOX, status)
 
-        index.clear_folder("INBOX")
+        assert index.bind_uidvalidity("INBOX", FolderRole.INBOX, 5) is False
+        assert index.bind_uidvalidity("INBOX", FolderRole.INBOX, 6) is True
 
         assert index.folder_status("INBOX") is None
         assert index.folder_uids("INBOX") == set()
