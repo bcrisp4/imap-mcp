@@ -391,19 +391,7 @@ MIT. It is short, widely known, and matches the licences of the main dependencie
 
 ## Open issues
 
-### O1. iCloud capabilities after login
-
-Before login, iCloud advertises `IMAP4rev1`, `SASL-IR`, `AUTH=PLAIN`, `AUTH=XOAUTH2` and Apple-specific extensions (checked 2026-10-31). It does not show the capabilities that it offers after login. The design depends on three of them: `CONDSTORE` for flag updates, `UID SEARCH HEADER Message-ID` for lookup by header, and `BODYSTRUCTURE` partial fetches of text parts.
-
-- Options: each one has a fallback in Appendix C, so no design change is needed if a capability is missing.
-- Next step: at the start of M1, log in once by hand, record `CAPABILITY`, and test each command on one message.
-
-### O2. `INBOX` and `Inbox` folders
-
-bcachet's index shows 403 messages in `INBOX` and 9 in a separate `Inbox` folder. I do not know the cause. It can be a real second folder, or a case alias that iCloud reports twice.
-
-- Options: index both as normal folders, or merge them.
-- Next step: in the M1 smoke test, compare the `LIST` output and the `UIDVALIDITY` of both names. If the two names share the same `UIDVALIDITY` and UIDs, treat `Inbox` as an alias and skip it.
+None.
 
 ## Closed issues
 
@@ -446,6 +434,14 @@ Candidates: fetch the whole message, or fetch `BODYSTRUCTURE` and then only the 
 ### C10. Default search scope
 
 Candidates: all folders, all folders except Junk, or all folders except Junk and Trash. The sync covers all folders. Junk holds the most hostile mail, and Trash holds mail I chose to remove. Default search skips both, which reduces noise and prompt-injection exposure. The agent can still name either folder.
+
+### C11. iCloud capabilities after login (was O1)
+
+`imap-mcp probe` on 2026-10-31 logged in as a custom-domain address and listed `CONDSTORE`, `QRESYNC`, `ESEARCH`, `UIDPLUS`, `UNSELECT`, `IDLE`, `SORT` and Apple extensions. `BODYSTRUCTURE` parsed, and `UID SEARCH HEADER Message-ID` found the message. The design uses the primary paths of Appendix C, and the fallbacks stay for other servers.
+
+### C12. `INBOX` and `Inbox` folders (was O2)
+
+On 2026-10-31, `LIST` returned one `INBOX` and no `Inbox`. The second name in bcachet's index was a folder that no longer exists. No alias rule is needed.
 
 ## Alternatives considered
 
