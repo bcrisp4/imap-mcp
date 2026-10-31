@@ -15,6 +15,7 @@ from __future__ import annotations
 import email
 import re
 import socketserver
+import ssl
 import threading
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -30,7 +31,6 @@ from imap_mcp.adapters.imap.guard import (
 from imap_mcp.domain.errors import GuardViolation
 
 if TYPE_CHECKING:
-    import ssl
     from collections.abc import Iterable, Mapping, Sequence
     from email.message import Message
 
@@ -441,7 +441,13 @@ class _Handler(socketserver.StreamRequestHandler):
 
     def setup(self) -> None:
         state = self.server_state
-        self.request = state.ssl_context.wrap_socket(self.request, server_side=True)
+        # A client that rejects the certificate ends the handshake. That is the
+        # expected outcome of the TLS test, not a server error.
+        self.tls_failed = False
+        try:
+            self.request = state.ssl_context.wrap_socket(self.request, server_side=True)
+        except ssl.SSLError, OSError:
+            self.tls_failed = True
         super().setup()
         self.connection_id = state.next_connection()
         self.folder: str | None = None
@@ -472,6 +478,8 @@ class _Handler(socketserver.StreamRequestHandler):
 
     def handle(self) -> None:
         state = self.server_state
+        if self.tls_failed:
+            return
         self.send("* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN] fake ready")
         while True:
             command = self.read_command()

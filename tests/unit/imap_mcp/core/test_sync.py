@@ -5,14 +5,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from factories import make_message
+from fakes import FakeCredentialSource
+from imap_mcp.adapters.imap.session import ImapMailSourceFactory
 from imap_mcp.domain.enums import SyncStateKind
 from imap_mcp.domain.model import SearchQuery
+from imapserver.server import PASSWORD, USERNAME, Quirks
 
 if TYPE_CHECKING:
+    import ssl
     from collections.abc import Callable
 
     from fakes import FakeClock, FakeLock
-    from imap_mcp.adapters.imap.session import ImapMailSourceFactory
     from imap_mcp.adapters.sqlite.index import SqliteIndex
     from imap_mcp.core.sync import SyncService
     from imapserver.server import FakeImapServer
@@ -266,3 +269,50 @@ class TestBudgetAndFreshness:
         assert first.error is not None
         assert "LOGIN" in first.error
         assert imap_server.command_verbs().count("LOGIN") == logins
+
+
+class TestFlagFallbacks:
+    def test_without_condstore_an_unread_change_refreshes_flags(
+        self, imap_server_factory: Callable[..., FakeImapServer],
+        client_ssl_context: ssl.SSLContext, make_sync: Callable[..., SyncService],
+        index: SqliteIndex,
+    ) -> None:  # fmt: skip
+        server = imap_server_factory(Quirks(condstore=False))
+        server.add_mailbox("INBOX")
+        uid = server.add_message("INBOX", make_message(subject="Read me"))
+        sources = ImapMailSourceFactory(
+            host="localhost", port=server.port, username=USERNAME,
+            credentials=FakeCredentialSource(PASSWORD), ssl_context=client_ssl_context,
+        )  # fmt: skip
+        sync = make_sync(sources=sources)
+        sync.full_sync()
+
+        server.set_flags("INBOX", uid, ["\\Seen"])
+        report = sync.full_sync()
+
+        assert report.flags_updated == 1
+        (hit,) = index.search(SearchQuery(), ALL).hits
+        assert hit.message.unread is False
+
+    def test_sync_now_for_a_folder_catches_a_flag_that_status_cannot_show(
+        self, imap_server_factory: Callable[..., FakeImapServer],
+        client_ssl_context: ssl.SSLContext, make_sync: Callable[..., SyncService],
+        index: SqliteIndex,
+    ) -> None:  # fmt: skip
+        server = imap_server_factory(Quirks(condstore=False))
+        server.add_mailbox("INBOX")
+        uid = server.add_message("INBOX", make_message(), flags=["\\Seen"])
+        sources = ImapMailSourceFactory(
+            host="localhost", port=server.port, username=USERNAME,
+            credentials=FakeCredentialSource(PASSWORD), ssl_context=client_ssl_context,
+        )  # fmt: skip
+        sync = make_sync(sources=sources)
+        sync.full_sync()
+
+        server.set_flags("INBOX", uid, ["\\Seen", "\\Flagged"])
+        assert sync.full_sync().flags_updated == 0
+        report = sync.sync_now("INBOX")
+
+        assert report.flags_updated == 1
+        (hit,) = index.search(SearchQuery(), ALL).hits
+        assert hit.message.flagged is True

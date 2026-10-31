@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from factories import make_parsed
+from fakes import FakeClock
 from imap_mcp.adapters.sqlite.connection import open_database
 from imap_mcp.adapters.sqlite.index import SEARCH_ALL_SQL, SEARCH_TEXT_SQL, SqliteIndex
 from imap_mcp.adapters.sqlite.schema import migrate
@@ -268,3 +269,29 @@ class TestQueryPlans:
             and "USING" not in step
         ]
         assert full_scans == [], plan
+
+
+class TestMaintenance:
+    def test_many_deletes_give_pages_back_to_the_file_system(
+        self, index: SqliteIndex
+    ) -> None:
+        filler = "lorem ipsum dolor sit amet " * 1000
+        for uid in range(1, 1001):
+            add(index, "INBOX", uid, make_parsed(subject=f"Bulk {uid}", body=filler))
+        index.remove_locations("INBOX", range(1, 1001))
+        index.delete_orphans()
+        before = index.stats()
+
+        freed = index.maintain(deadline=float("inf"), clock=FakeClock())
+
+        after = index.stats()
+        assert before.free_bytes > 16 * 1024 * 1024
+        assert freed > 0
+        assert after.file_bytes < before.file_bytes
+
+    def test_a_few_deletes_leave_the_file_alone(self, index: SqliteIndex) -> None:
+        add(index, "INBOX", 1, make_parsed())
+        index.remove_locations("INBOX", [1])
+        index.delete_orphans()
+
+        assert index.maintain(deadline=float("inf"), clock=FakeClock()) == 0
