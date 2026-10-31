@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import ssl
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
+from imapclient import IMAPClient
 
 from factories import make_message
 from fakes import FakeCredentialSource
-from imap_mcp.adapters.imap.session import ImapMailSource, ImapMailSourceFactory
+from imap_mcp.adapters.imap.guard import install_guard
+from imap_mcp.adapters.imap.session import ImapMailSourceFactory
 from imap_mcp.domain.enums import FolderRole
 from imap_mcp.domain.errors import GuardViolation, MailError
 from imap_mcp.ports import MailSource, MailSourceFactory
@@ -20,9 +22,9 @@ if TYPE_CHECKING:
 
 
 def factory_for(
-    server: FakeImapServer, context: ssl.SSLContext, **overrides: object
+    server: FakeImapServer, context: ssl.SSLContext, **overrides: Any
 ) -> ImapMailSourceFactory:
-    options: dict[str, object] = {
+    options: dict[str, Any] = {
         "host": "localhost",
         "port": server.port,
         "username": USERNAME,
@@ -30,7 +32,7 @@ def factory_for(
         "ssl_context": context,
     }
     options.update(overrides)
-    return ImapMailSourceFactory(**options)  # type: ignore[arg-type]
+    return ImapMailSourceFactory(**options)
 
 
 class TestConnection:
@@ -203,16 +205,22 @@ class TestDrafts:
         assert imap_server.mailboxes["INBOX"].messages == []
         assert "APPEND" not in imap_server.command_verbs()
 
-    def test_a_raw_write_on_the_client_is_refused(
+    def test_a_raw_write_on_a_guarded_client_is_refused(
         self, imap_server: FakeImapServer, client_ssl_context: ssl.SSLContext
     ) -> None:
-        with factory_for(imap_server, client_ssl_context).open() as source:
-            assert isinstance(source, ImapMailSource)
-            client = source._client  # pyright: ignore[reportPrivateUsage]
-            with pytest.raises(GuardViolation):
-                client.select_folder("INBOX")
-            source.examine("INBOX")
-            with pytest.raises(GuardViolation):
-                client.add_flags([1], [b"\\Seen"])
+        # imapclient is untyped, so the test drives it through Any.
+        client: Any = IMAPClient(
+            "localhost", port=imap_server.port, ssl_context=client_ssl_context
+        )
+        install_guard(client)
+        client.login(USERNAME, PASSWORD)
+        client.select_folder("INBOX", readonly=True)
+
+        with pytest.raises(GuardViolation):
+            client.select_folder("INBOX")
+        with pytest.raises(GuardViolation):
+            client.add_flags([1], [b"\\Seen"])
+        client.logout()
 
         assert "SELECT" not in imap_server.command_verbs()
+        assert "UID STORE" not in imap_server.command_verbs()

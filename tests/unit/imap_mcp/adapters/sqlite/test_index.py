@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 import stat
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -62,8 +62,8 @@ def add(index: SqliteIndex, folder: str, uid: int, parsed: ParsedMessage,
     return index.known_identities([parsed.identity])[parsed.identity]
 
 
-def search(index: SqliteIndex, **options: object) -> list[str]:
-    page = index.search(SearchQuery(**options), EXCLUDED)  # type: ignore[arg-type]
+def search(index: SqliteIndex, **options: Any) -> list[str]:
+    page = index.search(SearchQuery(**options), EXCLUDED)
     return [hit.message.parsed.subject for hit in page.hits]
 
 

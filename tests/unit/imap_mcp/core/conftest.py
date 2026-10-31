@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -64,8 +64,8 @@ def make_sync(
     lock: FakeLock,
     source_factory: Callable[..., ImapMailSourceFactory],
 ) -> Callable[..., SyncService]:
-    def make(**overrides: object) -> SyncService:
-        options: dict[str, object] = {
+    def make(**overrides: Any) -> SyncService:
+        options: dict[str, Any] = {
             "index": index,
             "sources": source_factory(),
             "lock": lock,
@@ -74,6 +74,6 @@ def make_sync(
             "budget_seconds": 20.0,
         }
         options.update(overrides)
-        return SyncService(**options)  # type: ignore[arg-type]
+        return SyncService(**options)
 
     return make
