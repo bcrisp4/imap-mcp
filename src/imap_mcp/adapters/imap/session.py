@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 import structlog
 from imapclient import IMAPClient, SocketTimeout
-from imapclient.exceptions import IMAPClientError
+from imapclient.exceptions import IMAPClientError, ProtocolError
 from imapclient.imapclient import seq_to_parenstr_upper
 from imapclient.response_parser import parse_fetch_response
 
@@ -62,13 +62,22 @@ def _s(value: Any) -> str:
 
 @contextlib.contextmanager
 def _mail_errors(operation: str) -> Generator[None]:
-    """Turn every transport or protocol error into `MailError`."""
+    """Turn every transport or protocol error into `MailError`.
+
+    The message names the operation and the exception type only. Library
+    error text can quote the server response, which holds headers and
+    attachment names, and the message reaches logs and the trusted
+    `sync.error` field. The original exception stays as `__cause__`.
+    """
     try:
         yield
     except GuardViolation:
         raise
+    except ProtocolError as exc:
+        msg = f"IMAP {operation} returned a response the client cannot parse"
+        raise UnexpectedResponseError(msg) from exc
     except _TRANSPORT_ERRORS as exc:
-        raise MailError(f"IMAP {operation} failed: {exc}") from exc
+        raise MailError(f"IMAP {operation} failed ({type(exc).__name__})") from exc
     except (KeyError, TypeError, ValueError, IndexError, RecursionError) as exc:
         # A server that leaves out an item the client asked for, or a
         # structure nested too deep for the recursive response parser.

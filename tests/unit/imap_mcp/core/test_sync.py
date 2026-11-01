@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+import structlog.testing
 
 from factories import make_message
 from fakes import FakeCredentialSource
@@ -323,6 +324,25 @@ class TestHostileStructure:
 
         assert subjects(index) == ["Newer", "Older"]
         assert len(imap_server.commands) == start
+
+    def test_server_text_in_a_parse_error_reaches_no_log_or_result(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+        index: SqliteIndex,
+    ) -> None:  # fmt: skip
+        imap_server.add_message("INBOX", make_message(subject="Fine"))
+        imap_server.add_message(
+            "INBOX",
+            make_message(subject="Broken"),
+            body_structure='("TEXT" "PLAIN" ("NAME" "SECRET-MARK")',
+        )
+
+        with structlog.testing.capture_logs() as logs:
+            report = make_sync().full_sync()
+
+        assert "SECRET-MARK" not in repr(logs)
+        assert "SECRET-MARK" not in repr(report)
+        assert "SECRET-MARK" not in repr(index.sync_state())
+        assert subjects(index) == ["Fine"]
 
 
 def nested_structure(depth: int) -> str:
