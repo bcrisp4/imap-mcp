@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-01
+
 ### Added
 
 - MCP server over stdio with six tools: `search_mail`, `get_message`, `list_folders`, `sync_now`, `download_attachment` and `create_draft`.
@@ -34,4 +36,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attachment names are capped at 255 UTF-8 bytes.
 - CI actions are pinned to commit SHAs, and uv and hatchling to exact versions.
 
-[unreleased]: https://github.com/bcrisp4/imap-mcp/commits/main
+[unreleased]: https://github.com/bcrisp4/imap-mcp/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/bcrisp4/imap-mcp/releases/tag/v0.1.0
