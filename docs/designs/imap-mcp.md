@@ -298,7 +298,7 @@ Scenario: an attachment is named `../../.zshrc` or `invoice.pdf.app`.
 Scenario: malware or a person reads the IMAP password from disk or from logs.
 
 - The password lives only in the Keychain. It is never in the config file, a log or a tool result.
-- I use an app-specific password. It gives IMAP access only, cannot change my Apple ID, and I can revoke it on its own.
+- I use an app-specific password. It cannot change my Apple ID, and I can revoke it on its own. It is not limited to IMAP: iCloud also accepts it for SMTP, contacts and calendars. A stolen copy can send mail, even though imap-mcp cannot.
 - The server connects only with TLS on port 993 and verifies the certificate. It never sends a password over a plaintext connection.
 
 ### T5. Theft of the index
