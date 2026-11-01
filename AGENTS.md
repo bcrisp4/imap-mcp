@@ -53,7 +53,7 @@ The config, tools and commands are in [README.md](README.md). Agents must not ru
 | Change | Run |
 |---|---|
 | Any Python code | `uv run ruff check`, `uv run ruff format --check`, `uv run pyright`, `uv run mypy`, `uv run pytest` |
-| A docstring | `uv run pdoc imap_mcp -o docs/api --docformat google` |
+| A docstring | `uv run pdoc imap_mcp --docformat google` to preview. The `docs.yml` workflow publishes the API reference to GitHub Pages on merge. |
 | A dependency | `uv run --no-dev python scripts/check_licenses.py` |
 | The design doc | Update its "Updated" date. Move a decided open issue to "Closed issues". |
 | A user-visible change | Add a line under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog 1.1.0) |

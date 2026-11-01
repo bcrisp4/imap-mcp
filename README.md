@@ -160,7 +160,7 @@ Tests never connect to a real mailbox. They use a TLS fake IMAP server that reco
 
 - [Design](https://github.com/bcrisp4/imap-mcp/blob/main/docs/designs/imap-mcp.md): goals, security model, sync design and decisions
 - [Changelog](https://github.com/bcrisp4/imap-mcp/blob/main/CHANGELOG.md)
-- API reference: run `uv run pdoc imap_mcp` in a clone
+- [API reference](https://bcrisp4.github.io/imap-mcp/): built from the docstrings on each merge to `main`. To browse it offline, run `uv run pdoc imap_mcp` in a clone.
 
 ## Licence
 
