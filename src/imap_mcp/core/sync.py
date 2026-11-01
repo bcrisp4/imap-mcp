@@ -340,6 +340,8 @@ class SyncService:
             )  # fmt: skip
 
         new = sorted(server_uids - local_uids, reverse=True)
+        if new and self._progress is not None:
+            self._progress(name, 0, len(new))
         for start in range(0, len(new), self._batch_size):
             if self._clock.monotonic() >= run.deadline:
                 run.interrupted = True

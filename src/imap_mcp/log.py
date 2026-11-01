@@ -64,6 +64,7 @@ def configure_logging(level: int = logging.INFO) -> None:
             ),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(level),
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
-        cache_logger_on_first_use=True,
+        # Resolve sys.stderr at each call: `imap-mcp sync` swaps it for a proxy
+        # that prints above the progress bar.
+        logger_factory=lambda *_: structlog.PrintLogger(file=sys.stderr),
     )

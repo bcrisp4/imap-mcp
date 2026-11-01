@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The API reference is published at https://bcrisp4.github.io/imap-mcp/.
 
+### Changed
+
+- `imap-mcp sync` shows a live progress bar for each folder in a terminal, updated after each batch of 50 messages. Other output gets a line when each folder starts.
+
 ## [0.1.0] - 2026-11-01
 
 ### Added

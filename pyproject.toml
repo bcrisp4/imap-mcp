@@ -23,6 +23,7 @@ dependencies = [
     "markdown-it-py>=4.2",
     "mcp>=2.3",
     "pydantic>=2.14",
+    "rich>=14",
     "structlog>=26.1",
 ]
 
