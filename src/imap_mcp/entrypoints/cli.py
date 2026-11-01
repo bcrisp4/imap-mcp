@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from imap_mcp.config import Config
+    from imap_mcp.domain.model import SyncReport
     from imap_mcp.ports import MailSource
 
 EXIT_OK: Final = 0
@@ -63,17 +64,61 @@ def cmd_set_password(config: Config) -> int:
     return EXIT_OK
 
 
-def cmd_sync(config: Config) -> int:
-    """Run a full sync with no time limit."""
+def _sync_with_lines(config: Config) -> SyncReport:
     last: dict[str, int] = {}
 
     def progress(folder: str, done: int, total: int) -> None:
-        if done == total or done - last.get(folder, 0) >= 500:
+        if done in (0, total) or done - last.get(folder, 0) >= 500:
             last[folder] = done
             _say(f"{folder}: {done}/{total}")
 
-    services = build_services(config, progress=progress)
-    report = services.sync.full_sync()
+    return build_services(config, progress=progress).sync.full_sync()
+
+
+def _sync_with_bar(config: Config) -> SyncReport:
+    from rich.console import Console
+    from rich.progress import (
+        BarColumn,
+        MofNCompleteColumn,
+        Progress,
+        SpinnerColumn,
+        TaskID,
+        TextColumn,
+        TimeElapsedColumn,
+        TimeRemainingColumn,
+    )
+
+    columns = (
+        SpinnerColumn(),
+        TextColumn("{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+    )
+    with Progress(*columns, console=Console(stderr=True)) as bar:
+        overall = bar.add_task("Syncing", total=None)
+        tasks: dict[str, TaskID] = {}
+
+        def progress(folder: str, done: int, total: int) -> None:
+            if folder not in tasks:
+                tasks[folder] = bar.add_task(folder, total=total)
+            bar.update(tasks[folder], completed=done)
+
+        report = build_services(config, progress=progress).sync.full_sync()
+        bar.remove_task(overall)
+    return report
+
+
+def cmd_sync(config: Config) -> int:
+    """Run a full sync with no time limit.
+
+    A terminal gets a live progress bar for each folder. Other output, such
+    as a log file, gets a text line at the start and end of each folder and
+    every 500 messages.
+    """
+    sync = _sync_with_bar if sys.stderr.isatty() else _sync_with_lines
+    report = sync(config)
     if report.kind is SyncStateKind.IN_PROGRESS_ELSEWHERE:
         _say("Another imap-mcp process is syncing. Try again later.")
         return EXIT_BUSY
