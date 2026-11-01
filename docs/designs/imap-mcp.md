@@ -184,14 +184,14 @@ auth_servers = ["icloud.com"]   # authserv-id domains of my IMAP server
 {
   "mcpServers": {
     "imap": {
-      "command": "/Users/ben/.local/bin/uv",
-      "args": ["run", "--directory", "/Users/ben/src/imap-mcp", "imap-mcp", "serve"]
+      "command": "/opt/homebrew/bin/uvx",
+      "args": ["imap-mcp@0.1.0", "serve"]
     }
   }
 }
 ```
 
-The desktop app starts with a minimal `PATH`, so `command` must be an absolute path.
+The desktop app starts with a minimal `PATH`, so `command` must be an absolute path. `which -a uvx` prints it.
 
 ## SLOs
 

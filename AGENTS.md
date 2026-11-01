@@ -59,6 +59,10 @@ The config, tools and commands are in [README.md](README.md). Agents must not ru
 | A user-visible change | Add a line under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog 1.1.0) |
 | A release | Follow [docs/releasing.md](docs/releasing.md). `release.yml` refuses a tag that does not match the package version or has no dated changelog section. |
 
+## Branches
+
+Changes reach `main` only through a pull request that the `check` CI job passes, merged by squash. The `main` ruleset enforces this, plus signed commits and linear history.
+
 ## Worktrees
 
 Put task worktrees in `.agents/worktrees/<task>/`. Git ignores that directory.
