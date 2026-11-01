@@ -138,7 +138,7 @@ class SyncService:
         self._batch_size = batch_size
         self._max_text_bytes = max_text_bytes
         self._auth_servers = tuple(auth_servers)
-        self._progress = progress or _NoProgress()
+        self._progress = progress if progress is not None else _NoProgress()
 
     # -- entry points -----------------------------------------------------------
 

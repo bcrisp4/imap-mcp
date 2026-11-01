@@ -82,9 +82,10 @@ def cmd_sync(config: Config) -> int:
     )
 
     started = time.monotonic()
-    console = Console(stderr=True)
-    if console.is_terminal:
-        with TerminalProgress(console, config.username) as view:
+    # isatty, not Console.is_terminal: FORCE_COLOR makes rich treat a pipe as
+    # a terminal, and a log file must get structlog events.
+    if sys.stderr.isatty():
+        with TerminalProgress(Console(stderr=True), config.username) as view:
             report = build_services(config, progress=view).sync.full_sync()
     else:
         report = build_services(config, progress=LogProgress()).sync.full_sync()

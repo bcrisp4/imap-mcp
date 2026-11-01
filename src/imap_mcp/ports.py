@@ -151,8 +151,9 @@ class Clock(Protocol):
 class SyncProgress(Protocol):
     """Receives progress events from a sync, for a display.
 
-    The engine calls these from its own thread between network reads. A slow
-    method slows the sync.
+    The engine calls these on the thread that runs the sync, between network
+    reads. A slow method slows the sync. A display that renders on another
+    thread must make its own reads of this state safe.
     """
 
     def folders_listed(self, names: Sequence[str]) -> None:

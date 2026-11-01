@@ -37,6 +37,7 @@ log = structlog.get_logger(__name__)
 
 LOG_INTERVAL_SECONDS: Final = 30.0
 _MAX_NAME_WIDTH: Final = 24
+_MAX_FINISHED_ROWS: Final = 10
 
 
 def duration(seconds: float) -> str:
@@ -87,9 +88,11 @@ class TerminalProgress:
         self._active: str | None = None
         self._width = 0
         self._task: TaskID | None = None
+        self._spinner = Spinner("dots", style="green")
         self._bar = Progress(
             SpinnerColumn(),
-            TextColumn("{task.description} "),
+            # Folder names come from the server and can hold brackets.
+            TextColumn("{task.description} ", markup=False),
             BarColumn(bar_width=30),
             TextColumn("{task.completed:>7,.0f} / {task.total:,.0f}"),
             TaskProgressColumn(),
@@ -146,7 +149,10 @@ class TerminalProgress:
         self._active = None
 
     def _label(self, name: str) -> str:
-        return name[: self._width].ljust(self._width)
+        if len(name) > self._width:
+            # Keep the end: nested folders often share a long prefix.
+            name = "…" + name[len(name) - self._width + 1 :]
+        return name.ljust(self._width)
 
     def _render(self) -> RenderableType:
         header = Table.grid(expand=True)
@@ -156,21 +162,32 @@ class TerminalProgress:
             Text.assemble(("imap-mcp sync", "bold"), "  ", (self._account, "dim")),
             Text(f"elapsed {duration(time.monotonic() - self._started)}", "dim"),
         )
+        # The sync thread changes this state while Live renders on its own
+        # thread, so read each field once.
+        finished = list(self._finished)
+        active = self._active
+        task = self._task
         rows: list[RenderableType] = [header, Text("")]
-        for name, new in list(self._finished):
+        # Live crops a view taller than the terminal, which would hide the
+        # active bar. Older finished folders collapse into one line.
+        hidden = len(finished) - _MAX_FINISHED_ROWS
+        if hidden > 0:
+            rows.append(Text(f"  ✓ {hidden} earlier folders", style="green"))
+        for name, new in finished[max(hidden, 0) :]:
             line = Text("  ✓ ", style="green")
             line.append(self._label(name), style="bold")
             line.append("  ")
             line.append(f"{new:,} new" if new else "no new mail", style="dim")
             rows.append(line)
-        active = self._active
-        if active is not None and self._task is None:
+        if active is not None and task is None:
             text = Text(self._label(active), style="bold")
             text.append("  checking", style="dim")
-            rows.append(Padding(Spinner("dots", text, style="green"), (0, 0, 0, 2)))
-        if self._task is not None:
+            # One Spinner for the whole view: it animates from its first render.
+            self._spinner.update(text=text)
+            rows.append(Padding(self._spinner, (0, 0, 0, 2)))
+        if task is not None:
             rows.append(Padding(self._bar, (0, 0, 0, 2)))
-        left = len(self._names) - len(self._finished) - (active is not None)
+        left = len(self._names) - len(finished) - (active is not None)
         if left > 0:
             rows.append(Text(f"    {left} folders to check", style="dim"))
         return Group(*rows)
