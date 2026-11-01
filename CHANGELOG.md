@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Ctrl-C and unexpected errors print one line instead of a Python traceback. Set `IMAP_MCP_DEBUG=1` to show where an unexpected error failed.
+
 ## [0.2.0] - 2026-11-01
 
 ### Added

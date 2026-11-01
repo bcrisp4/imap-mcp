@@ -10,7 +10,14 @@ import pytest
 from imap_mcp.adapters.flock import FileLock
 from imap_mcp.adapters.sqlite.connection import has_other_connections, open_database
 from imap_mcp.config import CONFIG_ENV
-from imap_mcp.entrypoints.cli import EXIT_BUSY, EXIT_ERROR, EXIT_OK, main
+from imap_mcp.entrypoints import cli
+from imap_mcp.entrypoints.cli import (
+    EXIT_BUSY,
+    EXIT_ERROR,
+    EXIT_INTERRUPTED,
+    EXIT_OK,
+    main,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -59,6 +66,41 @@ class TestCli:
 
         assert main(["status"]) == EXIT_ERROR
         assert "No config file" in capsys.readouterr().err
+
+    def test_ctrl_c_exits_with_one_line_and_no_traceback(
+        self, config_file: Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:  # fmt: skip
+        def interrupted(_config: object) -> int:
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(cli, "cmd_status", interrupted)
+
+        assert main(["status"]) == EXIT_INTERRUPTED
+        assert capsys.readouterr().err == "imap-mcp: interrupted.\n"
+
+    def test_an_unexpected_error_hides_its_message(
+        self, config_file: Path, monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:  # fmt: skip
+        mail_text = "Subject: " + "private"
+
+        def broken(_config: object) -> int:
+            raise ValueError(mail_text)
+
+        monkeypatch.setattr(cli, "cmd_status", broken)
+
+        assert main(["status"]) == EXIT_ERROR
+        err = capsys.readouterr().err
+        assert "unexpected ValueError" in err
+        assert "private" not in err
+        assert "Traceback" not in err
+
+        monkeypatch.setenv(cli.DEBUG_ENV, "1")
+        assert main(["status"]) == EXIT_ERROR
+        err = capsys.readouterr().err
+        assert "in broken" in err
+        assert "private" not in err
 
     def test_vacuum_runs_on_a_new_index(self, config_file: Path) -> None:
         assert main(["vacuum"]) == EXIT_OK
