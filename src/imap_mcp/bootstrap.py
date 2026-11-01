@@ -24,11 +24,10 @@ from imap_mcp.domain.errors import ImapMcpError
 
 if TYPE_CHECKING:
     import ssl
-    from collections.abc import Callable
     from pathlib import Path
 
     from imap_mcp.config import Config
-    from imap_mcp.ports import Clock, CredentialSource
+    from imap_mcp.ports import Clock, CredentialSource, SyncProgress
 
 LOCK_FILE: Final = "sync.lock"
 MIGRATION_WAIT_SECONDS: Final = 30.0
@@ -69,7 +68,7 @@ def build_services(
     ssl_context: ssl.SSLContext | None = None,
     clock: Clock | None = None,
     quarantine: bool = True,
-    progress: Callable[[str, int, int], None] | None = None,
+    progress: SyncProgress | None = None,
 ) -> Services:
     """Build every service from the config.
 
@@ -79,7 +78,7 @@ def build_services(
         ssl_context: Replaces the default TLS context. Only tests pass one.
         clock: Replaces the system clock. Only tests pass one.
         quarantine: Set the quarantine attribute on downloads.
-        progress: Receives (folder, done, total) during a sync.
+        progress: Receives progress events during a sync.
 
     Returns:
         The services.
