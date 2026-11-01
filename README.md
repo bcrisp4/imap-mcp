@@ -61,7 +61,7 @@ Email is untrusted input. Results keep sender text apart from server data, remov
 | `exclude_folders` | `[]` | Folders never to sync |
 | `auth_servers` | `["icloud.com"]` | Domains of your IMAP server's `Authentication-Results` headers. Only those headers give the `spf`, `dkim` and `dmarc` verdicts. |
 
-`IMAP_MCP_CONFIG` overrides the config file path.
+`IMAP_MCP_CONFIG` overrides the config file path. `IMAP_MCP_DEBUG=1` makes the CLI show where an unexpected error failed.
 
 ## Connect the Claude desktop app
 

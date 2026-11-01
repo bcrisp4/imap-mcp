@@ -10,6 +10,7 @@ import argparse
 import os
 import shutil
 import sys
+import traceback
 from email import message_from_bytes, policy
 from typing import TYPE_CHECKING, Final
 
@@ -32,6 +33,8 @@ if TYPE_CHECKING:
 EXIT_OK: Final = 0
 EXIT_ERROR: Final = 1
 EXIT_BUSY: Final = 2
+EXIT_INTERRUPTED: Final = 130
+DEBUG_ENV: Final = "IMAP_MCP_DEBUG"
 
 
 def _say(text: str) -> None:
@@ -271,4 +274,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return cmd_purge(config, confirmed=bool(args.yes))
     except ImapMcpError as exc:
         _say(f"imap-mcp: {exc}")
+        return EXIT_ERROR
+    except KeyboardInterrupt:
+        _say("imap-mcp: interrupted.")
+        return EXIT_INTERRUPTED
+    except Exception as exc:
+        # The exception message is left out, because library error text can
+        # quote mail content. OSError.strerror is OS text, so it is safe.
+        # The traceback frames show where it failed.
+        reason = (
+            f": {exc.strerror}" if isinstance(exc, OSError) and exc.strerror else ""
+        )
+        _say(f"imap-mcp: unexpected {type(exc).__name__}{reason}")
+        if os.environ.get(DEBUG_ENV):
+            _say("".join(traceback.format_tb(exc.__traceback__)).rstrip())
+        else:
+            _say(f"Set {DEBUG_ENV}=1 to show where it failed.")
         return EXIT_ERROR
