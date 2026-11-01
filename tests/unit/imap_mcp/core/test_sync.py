@@ -325,6 +325,40 @@ class TestHostileStructure:
         assert subjects(index) == ["Newer", "Older"]
         assert len(imap_server.commands) == start
 
+    def test_a_skipped_message_keeps_the_sync_partial_and_is_tried_again(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+        index: SqliteIndex,
+    ) -> None:  # fmt: skip
+        imap_server.add_message("INBOX", make_message(subject="Fine"))
+        deep = imap_server.add_message(
+            "INBOX", make_message(subject="Deep"), body_structure=nested_structure(600)
+        )
+        sync = make_sync()
+
+        first = sync.full_sync()
+        start = len(imap_server.commands)
+        sync.full_sync()
+
+        assert first.kind is SyncStateKind.PARTIAL
+        assert first.remaining == 1
+        assert any(
+            c.startswith(f"UID FETCH {deep} ")
+            for c in commands_since(imap_server, start)
+        )
+
+    def test_a_batch_where_every_message_fails_fails_the_sync(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+    ) -> None:  # fmt: skip
+        for subject in ("One", "Two"):
+            imap_server.add_message(
+                "INBOX", make_message(subject=subject),
+                body_structure=nested_structure(600),
+            )  # fmt: skip
+
+        report = make_sync().full_sync()
+
+        assert report.kind is SyncStateKind.FAILED
+
     def test_server_text_in_a_parse_error_reaches_no_log_or_result(
         self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
         index: SqliteIndex,

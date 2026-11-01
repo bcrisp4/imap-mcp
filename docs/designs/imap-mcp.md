@@ -317,7 +317,7 @@ Scenario: a message has a 50 MB HTML part, broken MIME, or text that breaks the 
 
 - The sync engine fetches at most 1 MB of text from each message. The index records that the text was cut.
 - The parser never raises an exception. A message that fails to parse keeps its headers and gets a `parse_failed` state.
-- If the client cannot parse the server's response for one message (for example a MIME structure nested hundreds of levels deep), the sync skips that message and indexes the others. Any unexpected error ends the sync as `failed` and records the attempt, so tool calls within the interval read the index and do not sync again into the same error.
+- If the client cannot parse the server's response for one message (for example a MIME structure nested hundreds of levels deep), the sync skips that message and indexes the others. The sync then reports `partial` and does not store the folder status, so the next sync tries the message again. If every message of a batch fails, the sync fails. Any unexpected error ends the sync as `failed` and records the attempt, so tool calls within the interval read the index and do not sync again into the same error.
 - The server turns a search query into quoted FTS5 terms. A user query never reaches `MATCH` as raw syntax. All SQL uses bound parameters.
 
 ### T7. Instructions hidden in email content
@@ -325,7 +325,7 @@ Scenario: a message has a 50 MB HTML part, broken MIME, or text that breaks the 
 Scenario: an email contains text the agent reads as instructions. The text can be visible, hidden with CSS, or written in invisible Unicode.
 
 - Each result keeps server data and sender data apart. The server builds IDs, dates, flags, folders, sync state and authentication results. Addresses, `Message-ID`, subject, sender name, snippet, body and attachment names sit in one `untrusted` object. The `outputSchema` labels it as data. Text that the server writes never contains email content.
-- The server wraps message text in a tag with a random nonce for each response, and removes any copy of that tag from the content. The MCP server `instructions` tell the agent that tagged text is data, not instructions.
+- The server wraps message text in a tag with a random nonce for each response, and replaces any copy of that tag in the content with `_`. The MCP server `instructions` tell the agent that tagged text is data, not instructions.
 - The HTML-to-text step drops `<style>`, `<script>`, comments, and elements that CSS hides (`display:none`, `visibility:hidden`, `font-size:0`, `opacity:0`, `max-height:0` with `overflow:hidden`). The result then reports `hidden_content_removed: true`.
 - The server removes TAG-block characters (U+E0000 to U+E007F), bidi controls and zero-width spaces. It keeps ZWJ and ZWNJ.
 - Each result shows `spf`, `dkim` and `dmarc` from the `Authentication-Results` headers that my IMAP server added, and `known_sender`. Only the run of headers at the top whose authserv-id is in `auth_servers` counts, and the first of them that reports a method gives its verdict. Only the `method=result` token at the start of each clause counts, so sender text in a comment or in `smtp.mailfrom` cannot add a verdict.
@@ -516,7 +516,7 @@ The connection also turns off double-quoted string literals with `setconfig(SQLI
 | `messages_fts` | `rowid` = `messages.id` | FTS5 over subject, sender, recipients and body, with external content from `messages` and triggers |
 | `sync_state` | single row | Last success, last attempt, state, error, progress for each folder |
 
-`identity` is a hash of the `Message-ID`, `Date` and `From` headers and the RFC822 size. A sender controls the headers and can copy them from a real message. The size includes the headers that my IMAP server added, so a forged copy does not merge into the real message. If a message has no `Message-ID`, `identity` is a hash of `Date`, `From`, `Subject` and size. Two copies of one message in two folders share one `messages` row and have two `locations` rows.
+`identity` is a hash of the `Message-ID`, `Date` and `From` headers and the RFC822 size. A sender controls the headers and can copy them from a real message. The size includes the headers that my IMAP server added, so a forged copy does not merge into the real message. Schema v3 clears an index built under the older key, and the next sync downloads every message again. If a message has no `Message-ID`, `identity` is a hash of `Date`, `From`, `Subject` and size. Two copies of one message in two folders share one `messages` row and have two `locations` rows.
 
 FTS5 uses `tokenize = 'porter unicode61 remove_diacritics 2'`. BM25 weights rank subject first, then sender and recipients, then body.
 

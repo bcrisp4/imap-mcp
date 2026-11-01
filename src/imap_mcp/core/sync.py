@@ -11,6 +11,7 @@ and parsed first, then written in one short transaction.
 from __future__ import annotations
 
 import math
+import traceback
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Final
 
@@ -67,6 +68,7 @@ class _Run:
     removed: int = 0
     flags_updated: int = 0
     remaining: int = 0
+    skipped: int = 0
     unvisited: bool = False
     interrupted: bool = False
     folders: list[str] = field(default_factory=list[str])
@@ -217,13 +219,18 @@ class SyncService:
             # A bug, or a message that no parser expects. Record the failure
             # so that tool calls within the interval read the index instead
             # of syncing again into the same error.
-            log.error("sync_failed", error_type=type(exc).__name__)
+            # The traceback frames show where it failed. The exception message
+            # is left out, because it can quote mail content.
+            log.error("sync_failed", error_type=type(exc).__name__,
+                      trace=traceback.format_tb(exc.__traceback__))  # fmt: skip
             error = f"Sync failed with an unexpected {type(exc).__name__}"
             return self._failed(previous, started, only_folder, error)
 
-        complete = not run.interrupted
+        # A skipped message keeps the sync partial, so the state never claims
+        # an index that misses mail.
+        complete = not run.interrupted and not run.skipped
         kind = SyncStateKind.COMPLETE if complete else SyncStateKind.PARTIAL
-        remaining = None if run.unvisited else run.remaining
+        remaining = None if run.unvisited else run.remaining + run.skipped
         # A single-folder sync says nothing about the other folders, so it
         # leaves the shared freshness state alone.
         if only_folder is None:
@@ -308,6 +315,7 @@ class SyncService:
         if stored == status and not force_flags:
             return
         run.folders.append(name)
+        skipped_before = run.skipped
         uidvalidity = source.examine(name)
         if self._index.bind_uidvalidity(name, folder.role, uidvalidity):
             log.warning("uidvalidity_changed", folder=name)
@@ -345,7 +353,10 @@ class SyncService:
             if self._progress is not None:
                 self._progress(name, min(start + self._batch_size, len(new)), len(new))
 
-        self._index.save_folder(name, folder.role, status)
+        # Saving the status would make the next sync skip this folder, and so
+        # never try a skipped message again.
+        if run.skipped == skipped_before:
+            self._index.save_folder(name, folder.role, status)
 
     def _refresh_flags(
         self,
@@ -382,7 +393,7 @@ class SyncService:
     def _sync_batch(
         self, source: MailSource, name: str, uids: Sequence[int], run: _Run
     ) -> None:
-        headers = self._fetch_headers(source, name, uids)
+        headers = self._fetch_headers(source, name, uids, run)
         identities = {h.uid: header_identity(h) for h in headers}
         known = self._index.known_identities(set(identities.values()))
 
@@ -402,23 +413,39 @@ class SyncService:
             run.remaining += skipped
 
     def _fetch_headers(
-        self, source: MailSource, name: str, uids: Sequence[int]
+        self, source: MailSource, name: str, uids: Sequence[int], run: _Run
     ) -> list[FetchedHeader]:
         """Fetch headers, and skip any message the client cannot parse.
 
         One hostile message must not stop the sync of every message around it.
-        If a batch fails to parse, fetch its messages one at a time. A skipped
-        message stays out of the index, so each sync tries it again.
+        If a batch fails to parse, fetch its messages one at a time until the
+        deadline. A skipped message keeps the folder unsaved and the sync
+        partial, so the next sync tries it again. If every message of a batch
+        fails, the cause is not one message, so the error stands.
         """
         try:
             return list(source.fetch_headers(uids))
         except UnexpectedResponseError:
             if len(uids) == 1:
                 log.warning("message_skipped", folder=name, uid=uids[0])
+                run.skipped += 1
                 return []
         headers: list[FetchedHeader] = []
-        for uid in uids:
-            headers.extend(self._fetch_headers(source, name, [uid]))
+        failed = 0
+        for position, uid in enumerate(uids):
+            if self._clock.monotonic() >= run.deadline:
+                run.interrupted = True
+                run.remaining += len(uids) - position
+                break
+            try:
+                headers.extend(source.fetch_headers([uid]))
+            except UnexpectedResponseError:
+                log.warning("message_skipped", folder=name, uid=uid)
+                failed += 1
+        if failed and failed == len(uids):
+            msg = f"IMAP UID FETCH failed for every message of a batch in {name!r}"
+            raise UnexpectedResponseError(msg)
+        run.skipped += failed
         return headers
 
     def _fetch_and_parse(

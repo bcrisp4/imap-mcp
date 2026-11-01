@@ -44,11 +44,9 @@ def strip_content_tags(text: str) -> str:
         text: Untrusted text.
 
     Returns:
-        The text without boundary tags.
+        The text with each boundary tag replaced by `_`.
     """
-    # Repeat until stable: removing an inner tag can join a new outer one.
-    while True:
-        stripped = _CONTENT_TAG.sub("", text)
-        if stripped == text:
-            return text
-        text = stripped
+    # Replace each tag with "_", not "". Removing an inner tag could join the
+    # text around it into a new tag, and a repeat until stable is quadratic.
+    # "_" cannot be part of a tag, so one linear pass is enough.
+    return _CONTENT_TAG.sub("_", text)

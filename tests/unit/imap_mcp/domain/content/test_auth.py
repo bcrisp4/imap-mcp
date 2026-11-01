@@ -33,8 +33,12 @@ class TestSenderTextInsideTheTrustedHeader:
                 'mx.icloud.com; spf=fail smtp.mailfrom="x;dkim=pass;dmarc=pass"'
                 "@evil.example; dkim=none; dmarc=fail"
             ),
+            (
+                'mx.icloud.com; spf=fail (domain of "a); dkim=pass; dmarc=pass ("'
+                "@evil.example does not designate); dkim=none; dmarc=fail"
+            ),
         ],
-        ids=["property-value", "comment", "quoted-local-part"],
+        ids=["property-value", "comment", "quoted-local-part", "quote-in-comment"],
     )
     def test_cannot_add_a_pass_verdict(self, header: str) -> None:
         assert parse_auth_results([header]) == AuthResults(

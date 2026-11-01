@@ -64,7 +64,11 @@ def _addresses(values: Sequence[str], field: str) -> list[str]:
             msg = f"{field} holds an invalid address."
             raise InvalidRequestError(msg)
         # Write the parsed form, so the header and `new_recipients` agree.
-        out.append(formataddr((name, address)))
+        try:
+            out.append(formataddr((name, address)))
+        except UnicodeEncodeError as exc:
+            msg = f"{field} holds an address with non-ASCII characters."
+            raise InvalidRequestError(msg) from exc
     return out
 
 

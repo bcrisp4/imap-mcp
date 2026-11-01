@@ -5,7 +5,7 @@ counts, authentication verdicts and sync state. Everything a sender controls
 (addresses, Message-ID, subject, sender name, snippet, body, attachment names)
 sits under `untrusted`. Long text is wrapped in an `email-content` tag that carries
 a random nonce for each response, and any copy of that tag inside the content
-is removed first, so a sender cannot close the boundary early.
+is replaced with `_` first, so a sender cannot close the boundary early.
 """
 
 from __future__ import annotations
@@ -33,22 +33,29 @@ if TYPE_CHECKING:
 _MAX_HEADER_CHARS: Final = 300
 _UNKNOWN_TYPE: Final = "application/octet-stream"
 # The sender writes the Content-Type, so a trusted field shows it only if it
-# is a known media type. The table is the stdlib's built-in one (no system
-# files), plus types common in mail that it lacks.
+# is a known media type. The table is the stdlib's built-in one (this
+# instance does not use the system mime.types files that `MimeTypes()` loads
+# into the module globals), plus types common in mail that it lacks.
 _STDLIB_TYPES: Final = mimetypes.MimeTypes().types_map
 _KNOWN_TYPES: Final = frozenset(
     {
         *_STDLIB_TYPES[True].values(),
         *_STDLIB_TYPES[False].values(),
         "application/ics",
+        "application/vnd.apple.pkpass",
+        "application/vnd.ms-outlook",
+        "application/x-pdf",
+        "application/x-zip-compressed",
         "application/pgp-encrypted",
         "application/pgp-signature",
         "application/pkcs7-mime",
         "application/pkcs7-signature",
         "message/delivery-status",
         "message/disposition-notification",
+        "image/pjpeg",
         "text/calendar",
         "text/rfc822-headers",
+        "text/vcard",
     }
 )
 MAX_LISTED_ADDRESSES: Final = 20

@@ -87,7 +87,7 @@ class TestDatabaseSetup:
         assert pragma("auto_vacuum") == 2  # incremental
         assert pragma("foreign_keys") == 1
         assert pragma("secure_delete") == 1
-        assert pragma("user_version") == 2
+        assert pragma("user_version") == 3
 
     def test_a_double_quoted_unknown_column_is_an_error(
         self, conn: sqlite3.Connection
@@ -96,7 +96,20 @@ class TestDatabaseSetup:
             conn.execute('SELECT "no_such_column" FROM messages')
 
     def test_migrating_twice_changes_nothing(self, conn: sqlite3.Connection) -> None:
-        assert migrate(conn) == 2
+        assert migrate(conn) == 3
+
+    def test_v3_clears_messages_indexed_under_the_old_identity(
+        self, conn: sqlite3.Connection
+    ) -> None:
+        index = SqliteIndex(conn)
+        add(index, "INBOX", 1, make_parsed(subject="Old"))
+        conn.execute("PRAGMA user_version = 2")
+
+        migrate(conn)
+
+        assert index.stats().messages == 0
+        assert index.folder_uids("INBOX") == set()
+        assert index.folder_status("INBOX") is None
 
 
 class TestSearch:

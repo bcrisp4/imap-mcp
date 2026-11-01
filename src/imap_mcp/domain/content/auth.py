@@ -63,7 +63,12 @@ def parse_auth_results(
 
 
 def _clauses(header: str) -> list[str]:
-    """Split a header on `;` outside quoted strings, with comments removed."""
+    """Split a header on `;` outside quoted strings, with comments removed.
+
+    A quoted string is tracked inside a comment too. A server can copy a
+    quoted local-part such as `"a); dmarc=pass ("@evil.example` into a
+    comment, and its `)` must not end the comment.
+    """
     clauses: list[str] = []
     current: list[str] = []
     depth = 0
@@ -76,17 +81,19 @@ def _clauses(header: str) -> list[str]:
         elif char == "\\" and (quoted or depth):
             escaped = True
         elif quoted:
-            current.append(char)
+            if depth == 0:
+                current.append(char)
             quoted = char != '"'
+        elif char == '"':
+            quoted = True
+            if depth == 0:
+                current.append(char)
         elif char == "(":
             depth += 1
         elif char == ")" and depth:
             depth -= 1
         elif depth:
             continue
-        elif char == '"':
-            quoted = True
-            current.append(char)
         elif char == ";":
             clauses.append("".join(current).strip())
             current = []

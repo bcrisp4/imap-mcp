@@ -109,14 +109,12 @@ and plain text to the model.</p>
 </span><span id="L-44"><a href="#L-44"><span class="linenos">44</span></a><span class="sd">        text: Untrusted text.</span>
 </span><span id="L-45"><a href="#L-45"><span class="linenos">45</span></a>
 </span><span id="L-46"><a href="#L-46"><span class="linenos">46</span></a><span class="sd">    Returns:</span>
-</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">        The text without boundary tags.</span>
+</span><span id="L-47"><a href="#L-47"><span class="linenos">47</span></a><span class="sd">        The text with each boundary tag replaced by `_`.</span>
 </span><span id="L-48"><a href="#L-48"><span class="linenos">48</span></a><span class="sd">    """</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a>    <span class="c1"># Repeat until stable: removing an inner tag can join a new outer one.</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a>    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a>        <span class="n">stripped</span> <span class="o">=</span> <span class="n">_CONTENT_TAG</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a>        <span class="k">if</span> <span class="n">stripped</span> <span class="o">==</span> <span class="n">text</span><span class="p">:</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos">53</span></a>            <span class="k">return</span> <span class="n">text</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos">54</span></a>        <span class="n">text</span> <span class="o">=</span> <span class="n">stripped</span>
+</span><span id="L-49"><a href="#L-49"><span class="linenos">49</span></a>    <span class="c1"># Replace each tag with "_", not "". Removing an inner tag could join the</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos">50</span></a>    <span class="c1"># text around it into a new tag, and a repeat until stable is quadratic.</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos">51</span></a>    <span class="c1"># "_" cannot be part of a tag, so one linear pass is enough.</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos">52</span></a>    <span class="k">return</span> <span class="n">_CONTENT_TAG</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -183,14 +181,12 @@ and plain text to the model.</p>
 </span><span id="strip_content_tags-45"><a href="#strip_content_tags-45"><span class="linenos">45</span></a><span class="sd">        text: Untrusted text.</span>
 </span><span id="strip_content_tags-46"><a href="#strip_content_tags-46"><span class="linenos">46</span></a>
 </span><span id="strip_content_tags-47"><a href="#strip_content_tags-47"><span class="linenos">47</span></a><span class="sd">    Returns:</span>
-</span><span id="strip_content_tags-48"><a href="#strip_content_tags-48"><span class="linenos">48</span></a><span class="sd">        The text without boundary tags.</span>
+</span><span id="strip_content_tags-48"><a href="#strip_content_tags-48"><span class="linenos">48</span></a><span class="sd">        The text with each boundary tag replaced by `_`.</span>
 </span><span id="strip_content_tags-49"><a href="#strip_content_tags-49"><span class="linenos">49</span></a><span class="sd">    """</span>
-</span><span id="strip_content_tags-50"><a href="#strip_content_tags-50"><span class="linenos">50</span></a>    <span class="c1"># Repeat until stable: removing an inner tag can join a new outer one.</span>
-</span><span id="strip_content_tags-51"><a href="#strip_content_tags-51"><span class="linenos">51</span></a>    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-</span><span id="strip_content_tags-52"><a href="#strip_content_tags-52"><span class="linenos">52</span></a>        <span class="n">stripped</span> <span class="o">=</span> <span class="n">_CONTENT_TAG</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">""</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
-</span><span id="strip_content_tags-53"><a href="#strip_content_tags-53"><span class="linenos">53</span></a>        <span class="k">if</span> <span class="n">stripped</span> <span class="o">==</span> <span class="n">text</span><span class="p">:</span>
-</span><span id="strip_content_tags-54"><a href="#strip_content_tags-54"><span class="linenos">54</span></a>            <span class="k">return</span> <span class="n">text</span>
-</span><span id="strip_content_tags-55"><a href="#strip_content_tags-55"><span class="linenos">55</span></a>        <span class="n">text</span> <span class="o">=</span> <span class="n">stripped</span>
+</span><span id="strip_content_tags-50"><a href="#strip_content_tags-50"><span class="linenos">50</span></a>    <span class="c1"># Replace each tag with "_", not "". Removing an inner tag could join the</span>
+</span><span id="strip_content_tags-51"><a href="#strip_content_tags-51"><span class="linenos">51</span></a>    <span class="c1"># text around it into a new tag, and a repeat until stable is quadratic.</span>
+</span><span id="strip_content_tags-52"><a href="#strip_content_tags-52"><span class="linenos">52</span></a>    <span class="c1"># "_" cannot be part of a tag, so one linear pass is enough.</span>
+</span><span id="strip_content_tags-53"><a href="#strip_content_tags-53"><span class="linenos">53</span></a>    <span class="k">return</span> <span class="n">_CONTENT_TAG</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -208,7 +204,7 @@ a message could otherwise close the boundary early.</p>
 <h6 id="returns">Returns:</h6>
 
 <blockquote>
-  <p>The text without boundary tags.</p>
+  <p>The text with each boundary tag replaced by <code>_</code>.</p>
 </blockquote>
 </div>
 

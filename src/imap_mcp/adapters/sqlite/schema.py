@@ -130,7 +130,20 @@ CREATE TABLE sync_state (
 ) STRICT;
 """
 
-MIGRATIONS: Final = (_V1, _V2)
+# v3: the identity key now covers the message size, and auth verdicts come
+# from a stricter parser. Rows stored under the old rules would not link to
+# new copies and would keep old verdicts, so the index is cleared. The next
+# sync downloads every message again.
+_V3: Final = """
+DELETE FROM messages;
+
+UPDATE folders SET synced = 0, uidvalidity = NULL, uidnext = NULL,
+    messages = NULL, unseen = NULL, highestmodseq = NULL;
+
+DELETE FROM sync_state;
+"""
+
+MIGRATIONS: Final = (_V1, _V2, _V3)
 """Migration N takes the database from `user_version` N to N + 1."""
 
 

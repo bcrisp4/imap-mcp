@@ -148,6 +148,15 @@ class TestS4DraftAReply:
         assert draft["new_recipients"] == ["a@known.com"]
         assert "To: a@known.com\r\n" in raw
 
+    async def test_a_non_ascii_address_is_refused_as_invalid(
+        self, server: MCPServer, imap_server: FakeImapServer
+    ) -> None:
+        error = await call_error(server, "create_draft", to=["jose@exämple.com"],
+                                 subject="Hi", body="x")  # fmt: skip
+
+        assert "non-ASCII" in error
+        assert imap_server.mailboxes["Drafts"].messages == []
+
     async def test_a_header_injection_in_the_subject_is_refused(
         self, server: MCPServer, imap_server: FakeImapServer
     ) -> None:
