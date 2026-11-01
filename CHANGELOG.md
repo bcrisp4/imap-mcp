@@ -7,13 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-01
+
 ### Changed
 
 - `imap-mcp sync` in a terminal shows one line for each finished folder, a bar with rate and time left for the active folder, and the number of folders left. The view clears at the end and leaves a summary with the duration.
 - `imap-mcp sync` writes progress as structlog events when stderr is not a terminal.
-
-### Changed
-
 - Ctrl-C and unexpected errors print one line instead of a Python traceback. Set `IMAP_MCP_DEBUG=1` to show where an unexpected error failed.
 
 ## [0.2.0] - 2026-11-01
@@ -55,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attachment names are capped at 255 UTF-8 bytes.
 - CI actions are pinned to commit SHAs, and uv and hatchling to exact versions.
 
-[unreleased]: https://github.com/bcrisp4/imap-mcp/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/bcrisp4/imap-mcp/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/bcrisp4/imap-mcp/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/bcrisp4/imap-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bcrisp4/imap-mcp/releases/tag/v0.1.0
