@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-01
+
 ### Added
 
 - The API reference is published at https://bcrisp4.github.io/imap-mcp/.
@@ -44,5 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attachment names are capped at 255 UTF-8 bytes.
 - CI actions are pinned to commit SHAs, and uv and hatchling to exact versions.
 
-[unreleased]: https://github.com/bcrisp4/imap-mcp/compare/v0.1.0...HEAD
+[unreleased]: https://github.com/bcrisp4/imap-mcp/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/bcrisp4/imap-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bcrisp4/imap-mcp/releases/tag/v0.1.0
