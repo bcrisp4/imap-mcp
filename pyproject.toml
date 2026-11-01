@@ -37,7 +37,7 @@ Changelog = "https://github.com/bcrisp4/imap-mcp/blob/main/CHANGELOG.md"
 imap-mcp = "imap_mcp.entrypoints.cli:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.33.0"]
 build-backend = "hatchling.build"
 
 # The sdist holds only what a rebuild and the tests need. Agent skills, CI
