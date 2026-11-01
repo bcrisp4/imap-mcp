@@ -1,0 +1,3 @@
+# Agent skills are third-party code. Without this, GitHub counts their .cjs
+# files as project JavaScript, and CodeQL default setup tries to scan them.
+.agents/skills/** linguist-vendored
