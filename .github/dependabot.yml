@@ -1,0 +1,29 @@
+# Version updates. Security updates are enabled in the repository settings
+# and ignore the cooldown.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    # A new release must be 7 days old before Dependabot proposes it. This
+    # gives time to detect and yank a compromised release.
+    cooldown:
+      default-days: 7
+    groups:
+      uv:
+        patterns: ["*"]
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
