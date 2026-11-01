@@ -9,7 +9,7 @@ remote server.
 from __future__ import annotations
 
 from email.message import EmailMessage
-from email.utils import format_datetime, make_msgid, parseaddr
+from email.utils import format_datetime, formataddr, make_msgid, parseaddr
 from typing import TYPE_CHECKING, Any, Final
 
 from markdown_it import MarkdownIt
@@ -59,11 +59,12 @@ def _addresses(values: Sequence[str], field: str) -> list[str]:
         if "\n" in value or "\r" in value:
             msg = f"{field} contains a line break."
             raise InvalidRequestError(msg)
-        _, address = parseaddr(value)
+        name, address = parseaddr(value)
         if "@" not in address or " " in address:
             msg = f"{field} holds an invalid address."
             raise InvalidRequestError(msg)
-        out.append(value.strip())
+        # Write the parsed form, so the header and `new_recipients` agree.
+        out.append(formataddr((name, address)))
     return out
 
 

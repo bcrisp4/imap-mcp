@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from imap_mcp.ports import FileSink, Index, MailSourceFactory
 
 MAX_FILENAME_CHARS: Final = 200
+# APFS and most other file systems limit a name to 255 bytes, not characters.
+_MAX_FILENAME_BYTES: Final = 255
 _MAX_EXTENSION_CHARS: Final = 10
 _UNSAFE: Final = re.compile(r"[\x00-\x1f\x7f/\\:]")
 _SPACES: Final = re.compile(r"\s+")
@@ -33,7 +35,7 @@ def safe_filename(name: str | None, part: str) -> str:
 
     The result has no path separator, no control or invisible character, no
     leading dot (so it is never hidden or a relative path), and at most 200
-    characters with the extension kept.
+    characters and 255 UTF-8 bytes with the extension kept.
 
     Args:
         name: The name the sender gave, or None.
@@ -47,13 +49,14 @@ def safe_filename(name: str | None, part: str) -> str:
     cleaned = _SPACES.sub(" ", _UNSAFE.sub("_", base)).strip().lstrip(". ").strip()
     if not cleaned:
         cleaned = f"attachment-{part.replace('.', '-')}"
-    if len(cleaned) > MAX_FILENAME_CHARS:
-        stem, dot, ext = cleaned.rpartition(".")
-        if dot and 0 < len(ext) <= _MAX_EXTENSION_CHARS:
-            cleaned = stem[: MAX_FILENAME_CHARS - len(ext) - 1] + "." + ext
-        else:
-            cleaned = cleaned[:MAX_FILENAME_CHARS]
-    return cleaned
+    stem, dot, ext = cleaned.rpartition(".")
+    if not (dot and stem and 0 < len(ext) <= _MAX_EXTENSION_CHARS):
+        stem, ext = cleaned, ""
+    suffix = f".{ext}" if ext else ""
+    stem = stem[: MAX_FILENAME_CHARS - len(suffix)]
+    while len((stem + suffix).encode()) > _MAX_FILENAME_BYTES:
+        stem = stem[:-1]
+    return stem + suffix
 
 
 def decode_part(data: bytes, encoding: str) -> bytes:

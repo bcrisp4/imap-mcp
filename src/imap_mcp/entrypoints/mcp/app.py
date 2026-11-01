@@ -58,9 +58,11 @@ Check `new_recipients` in its result before you suggest the user sends it.\
 """
 
 _READ: Final = ToolAnnotations(read_only_hint=True, open_world_hint=True)
-_WRITE_LOCAL: Final = ToolAnnotations(
+# Both write tools talk to the IMAP server, so they are open-world. A client
+# may skip its approval prompt for a closed-world tool.
+_WRITE: Final = ToolAnnotations(
     read_only_hint=False, destructive_hint=False, idempotent_hint=False,
-    open_world_hint=False,
+    open_world_hint=True,
 )  # fmt: skip
 
 
@@ -194,7 +196,7 @@ def build_server(services: Services) -> MCPServer:
 
         return call(run)
 
-    @server.tool(annotations=_WRITE_LOCAL)
+    @server.tool(annotations=_WRITE)
     def download_attachment(
         message_ref: Annotated[
             int, Field(description="The `id` of a result from search_mail.")
@@ -209,7 +211,7 @@ def build_server(services: Services) -> MCPServer:
 
         return call(run)
 
-    @server.tool(annotations=_WRITE_LOCAL)
+    @server.tool(annotations=_WRITE)
     def create_draft(
         to: Annotated[list[str], Field(description="To recipients.")],
         subject: Annotated[str, Field(description="The subject.")],

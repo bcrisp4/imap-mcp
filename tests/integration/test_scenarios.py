@@ -67,6 +67,10 @@ class TestS1FindAFact:
         assert create is not None
         assert create.read_only_hint is False
         assert create.destructive_hint is False
+        for name in ("create_draft", "download_attachment"):
+            annotations = tools[name].annotations
+            assert annotations is not None
+            assert annotations.open_world_hint is True
 
 
 class TestS2SyncOnAToolCall:
@@ -133,6 +137,16 @@ class TestS4DraftAReply:
 
         raw = imap_server.mailboxes["Drafts"].messages[0].raw.decode()
         assert "<img" not in raw.split("text/html", 1)[1]
+
+    async def test_the_draft_holds_the_address_that_new_recipients_reports(
+        self, server: MCPServer, imap_server: FakeImapServer
+    ) -> None:
+        draft = await call(server, "create_draft", to=["a@known.c om"],
+                           subject="Hi", body="x")  # fmt: skip
+
+        raw = imap_server.mailboxes["Drafts"].messages[0].raw.decode()
+        assert draft["new_recipients"] == ["a@known.com"]
+        assert "To: a@known.com\r\n" in raw
 
     async def test_a_header_injection_in_the_subject_is_refused(
         self, server: MCPServer, imap_server: FakeImapServer

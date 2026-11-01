@@ -65,6 +65,12 @@ class TestSafeFilename:
     def test_the_name_is_a_safe_base_name(self, raw: str | None, expected: str) -> None:
         assert safe_filename(raw, "2") == expected
 
+    def test_a_long_multibyte_name_fits_the_file_system_limit(self) -> None:
+        name = safe_filename("\U0001f4c4" * 200 + ".pdf", "2")
+
+        assert len(name.encode()) <= 255
+        assert name.endswith(".pdf")
+
     def test_a_long_name_keeps_its_extension(self) -> None:
         name = safe_filename("x" * 300 + ".pdf", "2")
 

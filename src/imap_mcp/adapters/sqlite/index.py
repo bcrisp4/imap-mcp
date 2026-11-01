@@ -407,7 +407,7 @@ class SqliteIndex:
         """Return the (folder, uid) pairs of a message."""
         rows = self._conn.execute(
             "SELECT f.name, l.uid FROM locations l JOIN folders f ON f.id = l.folder_id"
-            " WHERE l.message_id = ? ORDER BY f.name",
+            " WHERE l.message_id = ? ORDER BY f.name, l.uid",
             (message_id,),
         )
         return [(row["name"], row["uid"]) for row in rows]

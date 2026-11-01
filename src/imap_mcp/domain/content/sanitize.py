@@ -46,4 +46,9 @@ def strip_content_tags(text: str) -> str:
     Returns:
         The text without boundary tags.
     """
-    return _CONTENT_TAG.sub("", text)
+    # Repeat until stable: removing an inner tag can join a new outer one.
+    while True:
+        stripped = _CONTENT_TAG.sub("", text)
+        if stripped == text:
+            return text
+        text = stripped
