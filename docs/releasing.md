@@ -4,7 +4,11 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Befo
 
 ## Steps
 
-1. Pick the version. Increase MINOR for new features or a tool interface change, PATCH for fixes only.
+1. Pick the version from the entries under `## [Unreleased]` in `CHANGELOG.md`:
+
+   - If an entry is under `### Added` or `### Changed`, increase MINOR. A change to CLI output, the sync view or a log event counts, not only a tool interface change.
+   - If all entries are under `### Fixed` or `### Security`, increase PATCH. SemVer allows PATCH only for backward compatible bug fixes.
+   - If you are not sure, increase MINOR. After a PyPI upload, you cannot use the version number again.
 
 2. Set the version in `pyproject.toml`:
 
