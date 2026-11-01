@@ -10,6 +10,7 @@ is removed first, so a sender cannot close the boundary early.
 
 from __future__ import annotations
 
+import mimetypes
 import secrets
 from datetime import datetime
 from typing import TYPE_CHECKING, Final
@@ -30,6 +31,26 @@ if TYPE_CHECKING:
     )
 
 _MAX_HEADER_CHARS: Final = 300
+_UNKNOWN_TYPE: Final = "application/octet-stream"
+# The sender writes the Content-Type, so a trusted field shows it only if it
+# is a known media type. The table is the stdlib's built-in one (no system
+# files), plus types common in mail that it lacks.
+_STDLIB_TYPES: Final = mimetypes.MimeTypes().types_map
+_KNOWN_TYPES: Final = frozenset(
+    {
+        *_STDLIB_TYPES[True].values(),
+        *_STDLIB_TYPES[False].values(),
+        "application/ics",
+        "application/pgp-encrypted",
+        "application/pgp-signature",
+        "application/pkcs7-mime",
+        "application/pkcs7-signature",
+        "message/delivery-status",
+        "message/disposition-notification",
+        "text/calendar",
+        "text/rfc822-headers",
+    }
+)
 MAX_LISTED_ADDRESSES: Final = 20
 """Recipients shown per list. A sender controls the list, so it is capped."""
 
@@ -89,7 +110,11 @@ class AuthView(BaseModel):
 
 
 class AttachmentView(BaseModel):
-    """One attachment. Its file name is under `untrusted.attachment_names`."""
+    """One attachment. Its file name is under `untrusted.attachment_names`.
+
+    `type` is the sender's media type if it is a known one, else
+    `application/octet-stream`.
+    """
 
     part: str
     type: str
@@ -231,8 +256,14 @@ def sync_view(state: SyncState, now: datetime) -> SyncView:
 
 def _attachments(items: tuple[AttachmentInfo, ...]) -> list[AttachmentView]:
     return [
-        AttachmentView(part=a.part, type=a.content_type, size=a.size) for a in items
+        AttachmentView(part=a.part, type=_media_type(a.content_type), size=a.size)
+        for a in items
     ]
+
+
+def _media_type(content_type: str) -> str:
+    lowered = content_type.lower()
+    return lowered if lowered in _KNOWN_TYPES else _UNKNOWN_TYPE
 
 
 def _names(items: tuple[AttachmentInfo, ...]) -> dict[str, str]:

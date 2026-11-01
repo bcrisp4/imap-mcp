@@ -44,6 +44,10 @@ HOSTILE: dict[str, dict[str, Any]] = {
         "subject": "Newsletter six",
         "attachments": [(f"{MARK}{RLO}.pdf", "application/pdf", b"%PDF")],
     },
+    "attachment-type": {
+        "subject": "Newsletter eight",
+        "attachments": [("a.bin", f"application/{MARK.lower()}-ignore-rules", b"x")],
+    },
 }
 
 
