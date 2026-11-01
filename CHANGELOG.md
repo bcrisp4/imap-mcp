@@ -20,5 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Attachment download that never overwrites a file and sets the macOS quarantine attribute.
 - The macOS Keychain as the password store.
 - CLI commands: `serve`, `set-password`, `probe`, `sync`, `status`, `vacuum` and `purge`.
+- The `auth_servers` setting names the domains whose `Authentication-Results` headers count.
+
+### Security
+
+- Authentication verdicts come only from the top headers whose authserv-id is in `auth_servers`, and only from the `method=result` token at the start of each clause. Sender text in a comment or in `smtp.mailfrom` can no longer add a pass verdict.
+- The message identity includes the RFC822 size, so a forged copy with a real message's `Message-ID`, `Date` and `From` no longer merges into it.
+- A message the client cannot parse, such as one nested hundreds of MIME levels deep, is skipped. It no longer stops the sync or makes every read tool fail.
+- IMAP error messages no longer contain library error text, which could quote headers into logs and the `sync.error` field.
+- `attachments[].type` shows only known media types.
+- `create_draft` and `download_attachment` carry `openWorldHint: true`.
+- Draft headers hold the parsed address that `new_recipients` reports.
+- Attachment names are capped at 255 UTF-8 bytes.
+- CI actions are pinned to commit SHAs, and uv and hatchling to exact versions.
 
 [unreleased]: https://github.com/bcrisp4/imap-mcp/commits/main

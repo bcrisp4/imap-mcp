@@ -170,50 +170,51 @@ the services. This is the only module that names concrete adapters.</p>
 </span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>        <span class="n">interval</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">sync_interval_minutes</span><span class="p">),</span>
 </span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>        <span class="n">budget_seconds</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">sync_budget_seconds</span><span class="p">),</span>
 </span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>        <span class="n">exclude_folders</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">exclude_folders</span><span class="p">,</span>
-</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>        <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">,</span>
-</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>    <span class="p">)</span>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>    <span class="k">return</span> <span class="n">Services</span><span class="p">(</span>
-</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>        <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>        <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
-</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>        <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">,</span>
-</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>        <span class="n">read</span><span class="o">=</span><span class="n">ReadService</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">),</span>
-</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>        <span class="n">attachments</span><span class="o">=</span><span class="n">AttachmentService</span><span class="p">(</span>
-</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
-</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>            <span class="n">sink</span><span class="o">=</span><span class="n">DownloadDirectory</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">download_dir</span><span class="p">,</span> <span class="n">quarantine</span><span class="o">=</span><span class="n">quarantine</span><span class="p">),</span>
-</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>        <span class="p">),</span>
-</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>        <span class="n">drafts</span><span class="o">=</span><span class="n">DraftService</span><span class="p">(</span>
-</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
-</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>            <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
-</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>            <span class="n">from_address</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">from_address</span><span class="p">,</span>
-</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>        <span class="p">),</span>
-</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>    <span class="p">)</span>
-</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>        <span class="n">auth_servers</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">auth_servers</span><span class="p">,</span>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>        <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">,</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>    <span class="p">)</span>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>    <span class="k">return</span> <span class="n">Services</span><span class="p">(</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a>        <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a>        <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>        <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">,</span>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>        <span class="n">read</span><span class="o">=</span><span class="n">ReadService</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">),</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>        <span class="n">attachments</span><span class="o">=</span><span class="n">AttachmentService</span><span class="p">(</span>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>            <span class="n">sink</span><span class="o">=</span><span class="n">DownloadDirectory</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">download_dir</span><span class="p">,</span> <span class="n">quarantine</span><span class="o">=</span><span class="n">quarantine</span><span class="p">),</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>        <span class="p">),</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>        <span class="n">drafts</span><span class="o">=</span><span class="n">DraftService</span><span class="p">(</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>            <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a>            <span class="n">from_address</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">from_address</span><span class="p">,</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a>        <span class="p">),</span>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>    <span class="p">)</span>
 </span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a>
-</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_sources</span><span class="p">(</span>
-</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a>    <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span>
-</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>    <span class="n">credentials</span><span class="p">:</span> <span class="n">CredentialSource</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>    <span class="n">ssl_context</span><span class="p">:</span> <span class="n">ssl</span><span class="o">.</span><span class="n">SSLContext</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImapMailSourceFactory</span><span class="p">:</span>
-</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="w">    </span><span class="sd">"""Build the IMAP session factory. `imap-mcp probe` uses it on its own.</span>
-</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>
-</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="sd">    Args:</span>
-</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="sd">        config: The validated config.</span>
-</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a><span class="sd">        credentials: Replaces the Keychain. Only tests pass one.</span>
-</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">        ssl_context: Replaces the default TLS context. Only tests pass one.</span>
-</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>
-</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a><span class="sd">    Returns:</span>
-</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a><span class="sd">        The factory.</span>
-</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a><span class="sd">    """</span>
-</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>    <span class="k">return</span> <span class="n">ImapMailSourceFactory</span><span class="p">(</span>
-</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>        <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>        <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>        <span class="n">username</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
-</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>        <span class="n">credentials</span><span class="o">=</span><span class="n">credentials</span> <span class="ow">or</span> <span class="n">KeychainCredentialSource</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">),</span>
-</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>        <span class="n">drafts_folder</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drafts_folder</span><span class="p">,</span>
-</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>        <span class="n">ssl_context</span><span class="o">=</span><span class="n">ssl_context</span><span class="p">,</span>
-</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>    <span class="p">)</span>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_sources</span><span class="p">(</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a>    <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>    <span class="n">credentials</span><span class="p">:</span> <span class="n">CredentialSource</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a>    <span class="n">ssl_context</span><span class="p">:</span> <span class="n">ssl</span><span class="o">.</span><span class="n">SSLContext</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImapMailSourceFactory</span><span class="p">:</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a><span class="w">    </span><span class="sd">"""Build the IMAP session factory. `imap-mcp probe` uses it on its own.</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="sd">    Args:</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a><span class="sd">        config: The validated config.</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">        credentials: Replaces the Keychain. Only tests pass one.</span>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a><span class="sd">        ssl_context: Replaces the default TLS context. Only tests pass one.</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a><span class="sd">    Returns:</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a><span class="sd">        The factory.</span>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a><span class="sd">    """</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>    <span class="k">return</span> <span class="n">ImapMailSourceFactory</span><span class="p">(</span>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>        <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>        <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>        <span class="n">username</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>        <span class="n">credentials</span><span class="o">=</span><span class="n">credentials</span> <span class="ow">or</span> <span class="n">KeychainCredentialSource</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">),</span>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>        <span class="n">drafts_folder</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drafts_folder</span><span class="p">,</span>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>        <span class="n">ssl_context</span><span class="o">=</span><span class="n">ssl_context</span><span class="p">,</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>    <span class="p">)</span>
 </span></pre></div>
 
 
@@ -359,25 +360,26 @@ lock for too long.</li>
 </span><span id="build_services-97"><a href="#build_services-97"><span class="linenos"> 97</span></a>        <span class="n">interval</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">sync_interval_minutes</span><span class="p">),</span>
 </span><span id="build_services-98"><a href="#build_services-98"><span class="linenos"> 98</span></a>        <span class="n">budget_seconds</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">sync_budget_seconds</span><span class="p">),</span>
 </span><span id="build_services-99"><a href="#build_services-99"><span class="linenos"> 99</span></a>        <span class="n">exclude_folders</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">exclude_folders</span><span class="p">,</span>
-</span><span id="build_services-100"><a href="#build_services-100"><span class="linenos">100</span></a>        <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">,</span>
-</span><span id="build_services-101"><a href="#build_services-101"><span class="linenos">101</span></a>    <span class="p">)</span>
-</span><span id="build_services-102"><a href="#build_services-102"><span class="linenos">102</span></a>    <span class="k">return</span> <span class="n">Services</span><span class="p">(</span>
-</span><span id="build_services-103"><a href="#build_services-103"><span class="linenos">103</span></a>        <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-</span><span id="build_services-104"><a href="#build_services-104"><span class="linenos">104</span></a>        <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
-</span><span id="build_services-105"><a href="#build_services-105"><span class="linenos">105</span></a>        <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">,</span>
-</span><span id="build_services-106"><a href="#build_services-106"><span class="linenos">106</span></a>        <span class="n">read</span><span class="o">=</span><span class="n">ReadService</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">),</span>
-</span><span id="build_services-107"><a href="#build_services-107"><span class="linenos">107</span></a>        <span class="n">attachments</span><span class="o">=</span><span class="n">AttachmentService</span><span class="p">(</span>
-</span><span id="build_services-108"><a href="#build_services-108"><span class="linenos">108</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-</span><span id="build_services-109"><a href="#build_services-109"><span class="linenos">109</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
-</span><span id="build_services-110"><a href="#build_services-110"><span class="linenos">110</span></a>            <span class="n">sink</span><span class="o">=</span><span class="n">DownloadDirectory</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">download_dir</span><span class="p">,</span> <span class="n">quarantine</span><span class="o">=</span><span class="n">quarantine</span><span class="p">),</span>
-</span><span id="build_services-111"><a href="#build_services-111"><span class="linenos">111</span></a>        <span class="p">),</span>
-</span><span id="build_services-112"><a href="#build_services-112"><span class="linenos">112</span></a>        <span class="n">drafts</span><span class="o">=</span><span class="n">DraftService</span><span class="p">(</span>
-</span><span id="build_services-113"><a href="#build_services-113"><span class="linenos">113</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
-</span><span id="build_services-114"><a href="#build_services-114"><span class="linenos">114</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
-</span><span id="build_services-115"><a href="#build_services-115"><span class="linenos">115</span></a>            <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
-</span><span id="build_services-116"><a href="#build_services-116"><span class="linenos">116</span></a>            <span class="n">from_address</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">from_address</span><span class="p">,</span>
-</span><span id="build_services-117"><a href="#build_services-117"><span class="linenos">117</span></a>        <span class="p">),</span>
-</span><span id="build_services-118"><a href="#build_services-118"><span class="linenos">118</span></a>    <span class="p">)</span>
+</span><span id="build_services-100"><a href="#build_services-100"><span class="linenos">100</span></a>        <span class="n">auth_servers</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">auth_servers</span><span class="p">,</span>
+</span><span id="build_services-101"><a href="#build_services-101"><span class="linenos">101</span></a>        <span class="n">progress</span><span class="o">=</span><span class="n">progress</span><span class="p">,</span>
+</span><span id="build_services-102"><a href="#build_services-102"><span class="linenos">102</span></a>    <span class="p">)</span>
+</span><span id="build_services-103"><a href="#build_services-103"><span class="linenos">103</span></a>    <span class="k">return</span> <span class="n">Services</span><span class="p">(</span>
+</span><span id="build_services-104"><a href="#build_services-104"><span class="linenos">104</span></a>        <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+</span><span id="build_services-105"><a href="#build_services-105"><span class="linenos">105</span></a>        <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
+</span><span id="build_services-106"><a href="#build_services-106"><span class="linenos">106</span></a>        <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">,</span>
+</span><span id="build_services-107"><a href="#build_services-107"><span class="linenos">107</span></a>        <span class="n">read</span><span class="o">=</span><span class="n">ReadService</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="n">sync</span><span class="p">),</span>
+</span><span id="build_services-108"><a href="#build_services-108"><span class="linenos">108</span></a>        <span class="n">attachments</span><span class="o">=</span><span class="n">AttachmentService</span><span class="p">(</span>
+</span><span id="build_services-109"><a href="#build_services-109"><span class="linenos">109</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+</span><span id="build_services-110"><a href="#build_services-110"><span class="linenos">110</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
+</span><span id="build_services-111"><a href="#build_services-111"><span class="linenos">111</span></a>            <span class="n">sink</span><span class="o">=</span><span class="n">DownloadDirectory</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">download_dir</span><span class="p">,</span> <span class="n">quarantine</span><span class="o">=</span><span class="n">quarantine</span><span class="p">),</span>
+</span><span id="build_services-112"><a href="#build_services-112"><span class="linenos">112</span></a>        <span class="p">),</span>
+</span><span id="build_services-113"><a href="#build_services-113"><span class="linenos">113</span></a>        <span class="n">drafts</span><span class="o">=</span><span class="n">DraftService</span><span class="p">(</span>
+</span><span id="build_services-114"><a href="#build_services-114"><span class="linenos">114</span></a>            <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+</span><span id="build_services-115"><a href="#build_services-115"><span class="linenos">115</span></a>            <span class="n">sources</span><span class="o">=</span><span class="n">sources</span><span class="p">,</span>
+</span><span id="build_services-116"><a href="#build_services-116"><span class="linenos">116</span></a>            <span class="n">clock</span><span class="o">=</span><span class="n">clock</span><span class="p">,</span>
+</span><span id="build_services-117"><a href="#build_services-117"><span class="linenos">117</span></a>            <span class="n">from_address</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">from_address</span><span class="p">,</span>
+</span><span id="build_services-118"><a href="#build_services-118"><span class="linenos">118</span></a>        <span class="p">),</span>
+</span><span id="build_services-119"><a href="#build_services-119"><span class="linenos">119</span></a>    <span class="p">)</span>
 </span></pre></div>
 
 
@@ -414,29 +416,29 @@ lock for too long.</li>
 
     </div>
     <a class="headerlink" href="#build_sources"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="build_sources-121"><a href="#build_sources-121"><span class="linenos">121</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_sources</span><span class="p">(</span>
-</span><span id="build_sources-122"><a href="#build_sources-122"><span class="linenos">122</span></a>    <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span>
-</span><span id="build_sources-123"><a href="#build_sources-123"><span class="linenos">123</span></a>    <span class="n">credentials</span><span class="p">:</span> <span class="n">CredentialSource</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="build_sources-124"><a href="#build_sources-124"><span class="linenos">124</span></a>    <span class="n">ssl_context</span><span class="p">:</span> <span class="n">ssl</span><span class="o">.</span><span class="n">SSLContext</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="build_sources-125"><a href="#build_sources-125"><span class="linenos">125</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImapMailSourceFactory</span><span class="p">:</span>
-</span><span id="build_sources-126"><a href="#build_sources-126"><span class="linenos">126</span></a><span class="w">    </span><span class="sd">"""Build the IMAP session factory. `imap-mcp probe` uses it on its own.</span>
-</span><span id="build_sources-127"><a href="#build_sources-127"><span class="linenos">127</span></a>
-</span><span id="build_sources-128"><a href="#build_sources-128"><span class="linenos">128</span></a><span class="sd">    Args:</span>
-</span><span id="build_sources-129"><a href="#build_sources-129"><span class="linenos">129</span></a><span class="sd">        config: The validated config.</span>
-</span><span id="build_sources-130"><a href="#build_sources-130"><span class="linenos">130</span></a><span class="sd">        credentials: Replaces the Keychain. Only tests pass one.</span>
-</span><span id="build_sources-131"><a href="#build_sources-131"><span class="linenos">131</span></a><span class="sd">        ssl_context: Replaces the default TLS context. Only tests pass one.</span>
-</span><span id="build_sources-132"><a href="#build_sources-132"><span class="linenos">132</span></a>
-</span><span id="build_sources-133"><a href="#build_sources-133"><span class="linenos">133</span></a><span class="sd">    Returns:</span>
-</span><span id="build_sources-134"><a href="#build_sources-134"><span class="linenos">134</span></a><span class="sd">        The factory.</span>
-</span><span id="build_sources-135"><a href="#build_sources-135"><span class="linenos">135</span></a><span class="sd">    """</span>
-</span><span id="build_sources-136"><a href="#build_sources-136"><span class="linenos">136</span></a>    <span class="k">return</span> <span class="n">ImapMailSourceFactory</span><span class="p">(</span>
-</span><span id="build_sources-137"><a href="#build_sources-137"><span class="linenos">137</span></a>        <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
-</span><span id="build_sources-138"><a href="#build_sources-138"><span class="linenos">138</span></a>        <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
-</span><span id="build_sources-139"><a href="#build_sources-139"><span class="linenos">139</span></a>        <span class="n">username</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
-</span><span id="build_sources-140"><a href="#build_sources-140"><span class="linenos">140</span></a>        <span class="n">credentials</span><span class="o">=</span><span class="n">credentials</span> <span class="ow">or</span> <span class="n">KeychainCredentialSource</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">),</span>
-</span><span id="build_sources-141"><a href="#build_sources-141"><span class="linenos">141</span></a>        <span class="n">drafts_folder</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drafts_folder</span><span class="p">,</span>
-</span><span id="build_sources-142"><a href="#build_sources-142"><span class="linenos">142</span></a>        <span class="n">ssl_context</span><span class="o">=</span><span class="n">ssl_context</span><span class="p">,</span>
-</span><span id="build_sources-143"><a href="#build_sources-143"><span class="linenos">143</span></a>    <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="build_sources-122"><a href="#build_sources-122"><span class="linenos">122</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_sources</span><span class="p">(</span>
+</span><span id="build_sources-123"><a href="#build_sources-123"><span class="linenos">123</span></a>    <span class="n">config</span><span class="p">:</span> <span class="n">Config</span><span class="p">,</span>
+</span><span id="build_sources-124"><a href="#build_sources-124"><span class="linenos">124</span></a>    <span class="n">credentials</span><span class="p">:</span> <span class="n">CredentialSource</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="build_sources-125"><a href="#build_sources-125"><span class="linenos">125</span></a>    <span class="n">ssl_context</span><span class="p">:</span> <span class="n">ssl</span><span class="o">.</span><span class="n">SSLContext</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="build_sources-126"><a href="#build_sources-126"><span class="linenos">126</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImapMailSourceFactory</span><span class="p">:</span>
+</span><span id="build_sources-127"><a href="#build_sources-127"><span class="linenos">127</span></a><span class="w">    </span><span class="sd">"""Build the IMAP session factory. `imap-mcp probe` uses it on its own.</span>
+</span><span id="build_sources-128"><a href="#build_sources-128"><span class="linenos">128</span></a>
+</span><span id="build_sources-129"><a href="#build_sources-129"><span class="linenos">129</span></a><span class="sd">    Args:</span>
+</span><span id="build_sources-130"><a href="#build_sources-130"><span class="linenos">130</span></a><span class="sd">        config: The validated config.</span>
+</span><span id="build_sources-131"><a href="#build_sources-131"><span class="linenos">131</span></a><span class="sd">        credentials: Replaces the Keychain. Only tests pass one.</span>
+</span><span id="build_sources-132"><a href="#build_sources-132"><span class="linenos">132</span></a><span class="sd">        ssl_context: Replaces the default TLS context. Only tests pass one.</span>
+</span><span id="build_sources-133"><a href="#build_sources-133"><span class="linenos">133</span></a>
+</span><span id="build_sources-134"><a href="#build_sources-134"><span class="linenos">134</span></a><span class="sd">    Returns:</span>
+</span><span id="build_sources-135"><a href="#build_sources-135"><span class="linenos">135</span></a><span class="sd">        The factory.</span>
+</span><span id="build_sources-136"><a href="#build_sources-136"><span class="linenos">136</span></a><span class="sd">    """</span>
+</span><span id="build_sources-137"><a href="#build_sources-137"><span class="linenos">137</span></a>    <span class="k">return</span> <span class="n">ImapMailSourceFactory</span><span class="p">(</span>
+</span><span id="build_sources-138"><a href="#build_sources-138"><span class="linenos">138</span></a>        <span class="n">host</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+</span><span id="build_sources-139"><a href="#build_sources-139"><span class="linenos">139</span></a>        <span class="n">port</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+</span><span id="build_sources-140"><a href="#build_sources-140"><span class="linenos">140</span></a>        <span class="n">username</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+</span><span id="build_sources-141"><a href="#build_sources-141"><span class="linenos">141</span></a>        <span class="n">credentials</span><span class="o">=</span><span class="n">credentials</span> <span class="ow">or</span> <span class="n">KeychainCredentialSource</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">username</span><span class="p">),</span>
+</span><span id="build_sources-142"><a href="#build_sources-142"><span class="linenos">142</span></a>        <span class="n">drafts_folder</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drafts_folder</span><span class="p">,</span>
+</span><span id="build_sources-143"><a href="#build_sources-143"><span class="linenos">143</span></a>        <span class="n">ssl_context</span><span class="o">=</span><span class="n">ssl_context</span><span class="p">,</span>
+</span><span id="build_sources-144"><a href="#build_sources-144"><span class="linenos">144</span></a>    <span class="p">)</span>
 </span></pre></div>
 
 

@@ -5,7 +5,7 @@
 | Author | Ben Crisp |
 | Status | Draft |
 | Created | 2026-10-31 |
-| Updated | 2026-10-31 |
+| Updated | 2026-11-01 |
 
 imap-mcp is a local MCP server that gives an AI agent read-only, searchable access to one IMAP mailbox. It can write drafts and can never send mail.
 
@@ -163,6 +163,7 @@ sync_budget_seconds = 20
 db_path = "~/Library/Application Support/imap-mcp/imap-mcp.db"
 drafts_folder = ""        # empty: find by SPECIAL-USE, then by name
 exclude_folders = []
+auth_servers = ["icloud.com"]   # authserv-id domains of my IMAP server
 ```
 
 ### CLI
@@ -288,7 +289,7 @@ imap-mcp cannot stop a leak through a different tool, such as a web fetch tool. 
 
 Scenario: an attachment is named `../../.zshrc` or `invoice.pdf.app`.
 
-- The server keeps only the base name of the file. It removes path separators and control characters, and removes a leading `.`.
+- The server keeps only the base name of the file. It removes path separators and control characters, and removes a leading `.`. The name is at most 200 characters and 255 UTF-8 bytes.
 - The server writes only inside `download_dir`, and checks the resolved path. It never overwrites an existing file.
 - The server sets the `com.apple.quarantine` attribute on each saved file, so Gatekeeper checks it as a downloaded file.
 
@@ -316,6 +317,7 @@ Scenario: a message has a 50 MB HTML part, broken MIME, or text that breaks the 
 
 - The sync engine fetches at most 1 MB of text from each message. The index records that the text was cut.
 - The parser never raises an exception. A message that fails to parse keeps its headers and gets a `parse_failed` state.
+- If the client cannot parse the server's response for one message (for example a MIME structure nested hundreds of levels deep), the sync skips that message and indexes the others. Any unexpected error ends the sync as `failed` and records the attempt, so tool calls within the interval read the index and do not sync again into the same error.
 - The server turns a search query into quoted FTS5 terms. A user query never reaches `MATCH` as raw syntax. All SQL uses bound parameters.
 
 ### T7. Instructions hidden in email content
@@ -326,7 +328,8 @@ Scenario: an email contains text the agent reads as instructions. The text can b
 - The server wraps message text in a tag with a random nonce for each response, and removes any copy of that tag from the content. The MCP server `instructions` tell the agent that tagged text is data, not instructions.
 - The HTML-to-text step drops `<style>`, `<script>`, comments, and elements that CSS hides (`display:none`, `visibility:hidden`, `font-size:0`, `opacity:0`, `max-height:0` with `overflow:hidden`). The result then reports `hidden_content_removed: true`.
 - The server removes TAG-block characters (U+E0000 to U+E007F), bidi controls and zero-width spaces. It keeps ZWJ and ZWNJ.
-- Each result shows `spf`, `dkim` and `dmarc` from the `Authentication-Results` header that my IMAP server added, and `known_sender`. Each link appears as `text (url)`. `create_draft` reports `new_recipients`.
+- Each result shows `spf`, `dkim` and `dmarc` from the `Authentication-Results` headers that my IMAP server added, and `known_sender`. Only the run of headers at the top whose authserv-id is in `auth_servers` counts, and the first of them that reports a method gives its verdict. Only the `method=result` token at the start of each clause counts, so sender text in a comment or in `smtp.mailfrom` cannot add a verdict.
+- `attachments[].type` shows the sender's media type only if it is a known type. Otherwise it shows `application/octet-stream`. Each link appears as `text (url)`. `create_draft` reports `new_recipients`.
 
 A test corpus of hostile messages covers each item. The tests fail if hostile text reaches a trusted field.
 
@@ -372,6 +375,8 @@ Logs go to stderr, which the MCP client captures. The Claude desktop app writes 
 Logs never contain the password, a subject, a body, an email address, a snippet, an attachment name or a search query. A log line names a message only by folder and UID. So I can paste a log into a public issue.
 
 A command that the allowlist rejects logs at `ERROR`, with the command name only. This event means a bug in imap-mcp, so it is the one log line to read after a problem.
+
+An IMAP error names the operation and the exception type only. Library error text can quote the server response, which holds headers and attachment names, so it never reaches a log, a CLI message or the `sync.error` field.
 
 ## Milestones
 
@@ -511,7 +516,7 @@ The connection also turns off double-quoted string literals with `setconfig(SQLI
 | `messages_fts` | `rowid` = `messages.id` | FTS5 over subject, sender, recipients and body, with external content from `messages` and triggers |
 | `sync_state` | single row | Last success, last attempt, state, error, progress for each folder |
 
-`identity` is the `Message-ID` header combined with the `Date` and `From` headers. If a message has no `Message-ID`, `identity` is a hash of `Date`, `From`, `Subject` and size. Two copies of one message in two folders share one `messages` row and have two `locations` rows.
+`identity` is a hash of the `Message-ID`, `Date` and `From` headers and the RFC822 size. A sender controls the headers and can copy them from a real message. The size includes the headers that my IMAP server added, so a forged copy does not merge into the real message. If a message has no `Message-ID`, `identity` is a hash of `Date`, `From`, `Subject` and size. Two copies of one message in two folders share one `messages` row and have two `locations` rows.
 
 FTS5 uses `tokenize = 'porter unicode61 remove_diacritics 2'`. BM25 weights rank subject first, then sender and recipients, then body.
 

@@ -59,6 +59,7 @@ Email is untrusted input. Results keep sender text apart from server data, remov
 | `db_path` | `~/Library/Application Support/imap-mcp/imap-mcp.db` | The index. It must be on a local disk, not in iCloud Drive. |
 | `drafts_folder` | empty | The Drafts folder name. Empty means find it by role or name. |
 | `exclude_folders` | `[]` | Folders never to sync |
+| `auth_servers` | `["icloud.com"]` | Domains of your IMAP server's `Authentication-Results` headers. Only those headers give the `spf`, `dkim` and `dmarc` verdicts. |
 
 `IMAP_MCP_CONFIG` overrides the config file path.
 

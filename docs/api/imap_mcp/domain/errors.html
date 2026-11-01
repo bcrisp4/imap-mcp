@@ -55,6 +55,12 @@
 
             </li>
             <li>
+                    <a class="class" href="#UnexpectedResponseError">UnexpectedResponseError</a>
+                            <ul class="memberlist">
+                </ul>
+
+            </li>
+            <li>
                     <a class="class" href="#GuardViolation">GuardViolation</a>
                             <ul class="memberlist">
                 </ul>
@@ -123,19 +129,23 @@ and the entry points catch a small, fixed set.</p>
 </span><span id="L-23"><a href="#L-23"><span class="linenos">23</span></a><span class="w">    </span><span class="sd">"""An IMAP operation failed: connection, login, protocol or parse."""</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos">24</span></a>
 </span><span id="L-25"><a href="#L-25"><span class="linenos">25</span></a>
-</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="k">class</span><span class="w"> </span><span class="nc">GuardViolation</span><span class="p">(</span><span class="n">MailError</span><span class="p">):</span>
-</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a><span class="w">    </span><span class="sd">"""Code tried to send an IMAP command outside the allowlist.</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos">26</span></a><span class="k">class</span><span class="w"> </span><span class="nc">UnexpectedResponseError</span><span class="p">(</span><span class="n">MailError</span><span class="p">):</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos">27</span></a><span class="w">    </span><span class="sd">"""The server sent a response that the client cannot parse."""</span>
 </span><span id="L-28"><a href="#L-28"><span class="linenos">28</span></a>
-</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a><span class="sd">    This error always means a bug in imap-mcp. It is never retried.</span>
-</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a><span class="sd">    """</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a>
+</span><span id="L-29"><a href="#L-29"><span class="linenos">29</span></a>
+</span><span id="L-30"><a href="#L-30"><span class="linenos">30</span></a><span class="k">class</span><span class="w"> </span><span class="nc">GuardViolation</span><span class="p">(</span><span class="n">MailError</span><span class="p">):</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos">31</span></a><span class="w">    </span><span class="sd">"""Code tried to send an IMAP command outside the allowlist.</span>
 </span><span id="L-32"><a href="#L-32"><span class="linenos">32</span></a>
-</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a><span class="k">class</span><span class="w"> </span><span class="nc">NotFoundError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
-</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a><span class="w">    </span><span class="sd">"""A message, part or folder that a caller named does not exist."""</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos">33</span></a><span class="sd">    This error always means a bug in imap-mcp. It is never retried.</span>
+</span><span id="L-34"><a href="#L-34"><span class="linenos">34</span></a><span class="sd">    """</span>
 </span><span id="L-35"><a href="#L-35"><span class="linenos">35</span></a>
 </span><span id="L-36"><a href="#L-36"><span class="linenos">36</span></a>
-</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="k">class</span><span class="w"> </span><span class="nc">InvalidRequestError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="w">    </span><span class="sd">"""A caller passed a value that the tool cannot accept."""</span>
+</span><span id="L-37"><a href="#L-37"><span class="linenos">37</span></a><span class="k">class</span><span class="w"> </span><span class="nc">NotFoundError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos">38</span></a><span class="w">    </span><span class="sd">"""A message, part or folder that a caller named does not exist."""</span>
+</span><span id="L-39"><a href="#L-39"><span class="linenos">39</span></a>
+</span><span id="L-40"><a href="#L-40"><span class="linenos">40</span></a>
+</span><span id="L-41"><a href="#L-41"><span class="linenos">41</span></a><span class="k">class</span><span class="w"> </span><span class="nc">InvalidRequestError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
+</span><span id="L-42"><a href="#L-42"><span class="linenos">42</span></a><span class="w">    </span><span class="sd">"""A caller passed a value that the tool cannot accept."""</span>
 </span></pre></div>
 
 
@@ -224,6 +234,27 @@ and the entry points catch a small, fixed set.</p>
 
 
                 </section>
+                <section id="UnexpectedResponseError">
+                            <input id="UnexpectedResponseError-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">UnexpectedResponseError</span><wbr>(<span class="base"><a href="#MailError">MailError</a></span>):
+
+                <label class="view-source-button" for="UnexpectedResponseError-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#UnexpectedResponseError"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="UnexpectedResponseError-27"><a href="#UnexpectedResponseError-27"><span class="linenos">27</span></a><span class="k">class</span><span class="w"> </span><span class="nc">UnexpectedResponseError</span><span class="p">(</span><span class="n">MailError</span><span class="p">):</span>
+</span><span id="UnexpectedResponseError-28"><a href="#UnexpectedResponseError-28"><span class="linenos">28</span></a><span class="w">    </span><span class="sd">"""The server sent a response that the client cannot parse."""</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>The server sent a response that the client cannot parse.</p>
+</div>
+
+
+                </section>
                 <section id="GuardViolation">
                             <input id="GuardViolation-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr class">
@@ -235,11 +266,11 @@ and the entry points catch a small, fixed set.</p>
 
     </div>
     <a class="headerlink" href="#GuardViolation"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="GuardViolation-27"><a href="#GuardViolation-27"><span class="linenos">27</span></a><span class="k">class</span><span class="w"> </span><span class="nc">GuardViolation</span><span class="p">(</span><span class="n">MailError</span><span class="p">):</span>
-</span><span id="GuardViolation-28"><a href="#GuardViolation-28"><span class="linenos">28</span></a><span class="w">    </span><span class="sd">"""Code tried to send an IMAP command outside the allowlist.</span>
-</span><span id="GuardViolation-29"><a href="#GuardViolation-29"><span class="linenos">29</span></a>
-</span><span id="GuardViolation-30"><a href="#GuardViolation-30"><span class="linenos">30</span></a><span class="sd">    This error always means a bug in imap-mcp. It is never retried.</span>
-</span><span id="GuardViolation-31"><a href="#GuardViolation-31"><span class="linenos">31</span></a><span class="sd">    """</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="GuardViolation-31"><a href="#GuardViolation-31"><span class="linenos">31</span></a><span class="k">class</span><span class="w"> </span><span class="nc">GuardViolation</span><span class="p">(</span><span class="n">MailError</span><span class="p">):</span>
+</span><span id="GuardViolation-32"><a href="#GuardViolation-32"><span class="linenos">32</span></a><span class="w">    </span><span class="sd">"""Code tried to send an IMAP command outside the allowlist.</span>
+</span><span id="GuardViolation-33"><a href="#GuardViolation-33"><span class="linenos">33</span></a>
+</span><span id="GuardViolation-34"><a href="#GuardViolation-34"><span class="linenos">34</span></a><span class="sd">    This error always means a bug in imap-mcp. It is never retried.</span>
+</span><span id="GuardViolation-35"><a href="#GuardViolation-35"><span class="linenos">35</span></a><span class="sd">    """</span>
 </span></pre></div>
 
 
@@ -261,8 +292,8 @@ and the entry points catch a small, fixed set.</p>
 
     </div>
     <a class="headerlink" href="#NotFoundError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="NotFoundError-34"><a href="#NotFoundError-34"><span class="linenos">34</span></a><span class="k">class</span><span class="w"> </span><span class="nc">NotFoundError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
-</span><span id="NotFoundError-35"><a href="#NotFoundError-35"><span class="linenos">35</span></a><span class="w">    </span><span class="sd">"""A message, part or folder that a caller named does not exist."""</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="NotFoundError-38"><a href="#NotFoundError-38"><span class="linenos">38</span></a><span class="k">class</span><span class="w"> </span><span class="nc">NotFoundError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
+</span><span id="NotFoundError-39"><a href="#NotFoundError-39"><span class="linenos">39</span></a><span class="w">    </span><span class="sd">"""A message, part or folder that a caller named does not exist."""</span>
 </span></pre></div>
 
 
@@ -282,8 +313,8 @@ and the entry points catch a small, fixed set.</p>
 
     </div>
     <a class="headerlink" href="#InvalidRequestError"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="InvalidRequestError-38"><a href="#InvalidRequestError-38"><span class="linenos">38</span></a><span class="k">class</span><span class="w"> </span><span class="nc">InvalidRequestError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
-</span><span id="InvalidRequestError-39"><a href="#InvalidRequestError-39"><span class="linenos">39</span></a><span class="w">    </span><span class="sd">"""A caller passed a value that the tool cannot accept."""</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="InvalidRequestError-42"><a href="#InvalidRequestError-42"><span class="linenos">42</span></a><span class="k">class</span><span class="w"> </span><span class="nc">InvalidRequestError</span><span class="p">(</span><span class="n">ImapMcpError</span><span class="p">):</span>
+</span><span id="InvalidRequestError-43"><a href="#InvalidRequestError-43"><span class="linenos">43</span></a><span class="w">    </span><span class="sd">"""A caller passed a value that the tool cannot accept."""</span>
 </span></pre></div>
 
 
