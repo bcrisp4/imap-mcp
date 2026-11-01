@@ -29,7 +29,7 @@ from imap_mcp.domain.errors import (
 from imap_mcp.domain.model import SyncReport, SyncState
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Sequence
+    from collections.abc import Collection, Sequence
     from datetime import datetime, timedelta
 
     from imap_mcp.domain.model import (
@@ -39,7 +39,14 @@ if TYPE_CHECKING:
         MessageStructure,
         ParsedMessage,
     )
-    from imap_mcp.ports import Clock, Index, MailSource, MailSourceFactory, SyncLock
+    from imap_mcp.ports import (
+        Clock,
+        Index,
+        MailSource,
+        MailSourceFactory,
+        SyncLock,
+        SyncProgress,
+    )
 
 log = structlog.get_logger(__name__)
 
@@ -56,6 +63,20 @@ _ROLE_ORDER: Final = {
     FolderRole.JUNK: 5,
     FolderRole.TRASH: 6,
 }
+
+
+class _NoProgress:
+    def folders_listed(self, names: Sequence[str]) -> None:
+        pass
+
+    def folder_started(self, name: str) -> None:
+        pass
+
+    def folder_counted(self, name: str, new: int) -> None:
+        pass
+
+    def batch_synced(self, name: str, done: int, total: int) -> None:
+        pass
 
 
 @dataclass(slots=True)
@@ -90,7 +111,7 @@ class SyncService:
         batch_size: int = BATCH_SIZE,
         max_text_bytes: int = MAX_TEXT_BYTES,
         auth_servers: Sequence[str] = DEFAULT_AUTH_SERVERS,
-        progress: Callable[[str, int, int], None] | None = None,
+        progress: SyncProgress | None = None,
     ) -> None:
         """Create the service.
 
@@ -105,7 +126,7 @@ class SyncService:
             batch_size: Messages fetched and written together.
             max_text_bytes: The text fetch cap for each message.
             auth_servers: Domains whose `Authentication-Results` headers count.
-            progress: Called with (folder, done, total) during a sync.
+            progress: Receives progress events during a sync.
         """
         self._index = index
         self._sources = sources
@@ -117,7 +138,7 @@ class SyncService:
         self._batch_size = batch_size
         self._max_text_bytes = max_text_bytes
         self._auth_servers = tuple(auth_servers)
-        self._progress = progress
+        self._progress = progress or _NoProgress()
 
     # -- entry points -----------------------------------------------------------
 
@@ -288,6 +309,7 @@ class SyncService:
                 msg = f"No folder named {only_folder!r}. Call list_folders for names."
                 raise NotFoundError(msg)
         folders.sort(key=lambda f: (_ROLE_ORDER[f.role], f.name.casefold()))
+        self._progress.folders_listed([f.name for f in folders])
         condstore = "CONDSTORE" in source.capabilities()
         for position, folder in enumerate(folders):
             if self._clock.monotonic() >= run.deadline:
@@ -310,9 +332,11 @@ class SyncService:
         force_flags: bool,
     ) -> None:
         name = folder.name
+        self._progress.folder_started(name)
         status = source.status(name)
         stored = self._index.folder_status(name)
         if stored == status and not force_flags:
+            self._progress.folder_counted(name, 0)
             return
         run.folders.append(name)
         skipped_before = run.skipped
@@ -340,8 +364,7 @@ class SyncService:
             )  # fmt: skip
 
         new = sorted(server_uids - local_uids, reverse=True)
-        if new and self._progress is not None:
-            self._progress(name, 0, len(new))
+        self._progress.folder_counted(name, len(new))
         for start in range(0, len(new), self._batch_size):
             if self._clock.monotonic() >= run.deadline:
                 run.interrupted = True
@@ -352,8 +375,9 @@ class SyncService:
             if run.interrupted:
                 run.remaining += len(new) - start - len(batch)
                 return
-            if self._progress is not None:
-                self._progress(name, min(start + self._batch_size, len(new)), len(new))
+            self._progress.batch_synced(
+                name, min(start + self._batch_size, len(new)), len(new)
+            )
 
         # Saving the status would make the next sync skip this folder, and so
         # never try a skipped message again.

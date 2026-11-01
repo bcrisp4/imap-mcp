@@ -148,6 +148,31 @@ class Clock(Protocol):
 
 
 @runtime_checkable
+class SyncProgress(Protocol):
+    """Receives progress events from a sync, for a display.
+
+    The engine calls these from its own thread between network reads. A slow
+    method slows the sync.
+    """
+
+    def folders_listed(self, names: Sequence[str]) -> None:
+        """Receive every folder the sync will visit, in visit order."""
+        ...
+
+    def folder_started(self, name: str) -> None:
+        """Receive the start of the check of one folder."""
+        ...
+
+    def folder_counted(self, name: str, new: int) -> None:
+        """Receive the number of new messages the folder will download."""
+        ...
+
+    def batch_synced(self, name: str, done: int, total: int) -> None:
+        """Receive the progress after each batch of new messages."""
+        ...
+
+
+@runtime_checkable
 class FileSink(Protocol):
     """Writes downloaded attachments."""
 

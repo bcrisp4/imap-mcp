@@ -368,7 +368,7 @@ Logs go to stderr, which the MCP client captures. The Claude desktop app writes 
 
 | Level | Events |
 |---|---|
-| `INFO` | Start and stop, a sync start and end with counts and duration, a lock taken or skipped, a draft created (folder and UID only) |
+| `INFO` | Start and stop, a sync start and end with counts and duration, a lock taken or skipped, a draft created (folder and UID only), `imap-mcp sync` progress when stderr is not a terminal (folder name and counts only) |
 | `WARNING` | A sync that hit its time limit, an IMAP reconnect, a message that failed to parse (folder and UID only), a `UIDVALIDITY` change |
 | `ERROR` | Login failure, a sync failure, a command that the allowlist rejected |
 

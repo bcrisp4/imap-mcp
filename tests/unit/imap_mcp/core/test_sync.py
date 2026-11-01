@@ -17,7 +17,7 @@ from imapserver.server import PASSWORD, USERNAME, Quirks
 
 if TYPE_CHECKING:
     import ssl
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from fakes import FakeClock, FakeLock
     from imap_mcp.adapters.sqlite.index import SqliteIndex
@@ -77,6 +77,53 @@ class TestFullSync:
 
         verbs = {c.split(" ")[0] for c in commands_since(imap_server, start)}
         assert verbs <= {"CAPABILITY", "LOGIN", "LIST", "STATUS", "LOGOUT"}
+
+
+class RecordingProgress:
+    def __init__(self) -> None:
+        self.listed: list[str] = []
+        self.counted: dict[str, int] = {}
+        self.batches: list[tuple[str, int, int]] = []
+
+    def folders_listed(self, names: Sequence[str]) -> None:
+        self.listed = list(names)
+
+    def folder_started(self, name: str) -> None:
+        pass
+
+    def folder_counted(self, name: str, new: int) -> None:
+        self.counted[name] = new
+
+    def batch_synced(self, name: str, done: int, total: int) -> None:
+        self.batches.append((name, done, total))
+
+
+class TestProgress:
+    def test_events_count_every_folder_and_end_at_the_total(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService]
+    ) -> None:
+        for _ in range(3):
+            imap_server.add_message("INBOX", make_message())
+        progress = RecordingProgress()
+
+        make_sync(batch_size=2, progress=progress).full_sync()
+
+        assert progress.listed[0] == "INBOX"
+        assert set(progress.counted) == set(progress.listed)
+        assert progress.counted["INBOX"] == 3
+        assert progress.batches == [("INBOX", 2, 3), ("INBOX", 3, 3)]
+
+    def test_an_unchanged_mailbox_counts_zero_everywhere(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService]
+    ) -> None:
+        imap_server.add_message("INBOX", make_message())
+        make_sync().full_sync()
+        progress = RecordingProgress()
+
+        make_sync(progress=progress).full_sync()
+
+        assert set(progress.counted.values()) == {0}
+        assert progress.batches == []
 
 
 class TestIncrementalSync:
