@@ -73,6 +73,7 @@ class StoredMessage:
     flags: set[str]
     internal_date: datetime
     modseq: int
+    body_structure: str | None = None
 
 
 @dataclass(slots=True)
@@ -143,8 +144,13 @@ class FakeImapServer:
         *,
         flags: Iterable[str] = (),
         internal_date: datetime | None = None,
+        body_structure: str | None = None,
     ) -> int:
-        """Store a message and return its UID."""
+        """Store a message and return its UID.
+
+        `body_structure` replaces the rendered BODYSTRUCTURE, for a structure
+        that the renderer cannot build.
+        """
         with self._lock:
             box = self.mailboxes[folder]
             self.modseq += 1
@@ -157,6 +163,7 @@ class FakeImapServer:
                     flags=set(flags),
                     internal_date=internal_date or datetime(2026, 1, 1, tzinfo=UTC),
                     modseq=self.modseq,
+                    body_structure=body_structure,
                 )
             )
             return uid
@@ -705,7 +712,8 @@ class _Handler(socketserver.StreamRequestHandler):
             elif upper == "MODSEQ":
                 pieces.append(f"MODSEQ ({message.modseq})".encode())
             elif upper == "BODYSTRUCTURE":
-                pieces.append(f"BODYSTRUCTURE {body_structure(parsed)}".encode())
+                rendered = message.body_structure or body_structure(parsed)
+                pieces.append(f"BODYSTRUCTURE {rendered}".encode())
             elif upper.startswith("BODY.PEEK["):
                 key, data = self.section(message, parsed, item)
                 literals.append((key, data))

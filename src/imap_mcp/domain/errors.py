@@ -23,6 +23,10 @@ class MailError(ImapMcpError):
     """An IMAP operation failed: connection, login, protocol or parse."""
 
 
+class UnexpectedResponseError(MailError):
+    """The server sent a response that the client cannot parse."""
+
+
 class GuardViolation(MailError):
     """Code tried to send an IMAP command outside the allowlist.
 

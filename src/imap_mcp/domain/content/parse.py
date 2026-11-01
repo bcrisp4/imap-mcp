@@ -264,7 +264,15 @@ def parse_message(
             truncated = len(whole) >= max_bytes
         elif texts is not None:
             body, truncated, hidden = text_from_parts(structure, texts, max_bytes)
-    except ValueError, TypeError, LookupError, UnicodeError, IndexError, AttributeError:
+    except (
+        ValueError,
+        TypeError,
+        LookupError,
+        UnicodeError,
+        IndexError,
+        AttributeError,
+        RecursionError,
+    ):
         state = ParseState.FAILED
         body = ""
     return ParsedMessage(

@@ -19,12 +19,17 @@ import structlog
 from imap_mcp.domain.content.auth import DEFAULT_AUTH_SERVERS
 from imap_mcp.domain.content.parse import MAX_TEXT_BYTES, header_identity, parse_message
 from imap_mcp.domain.enums import FolderRole, SyncStateKind
-from imap_mcp.domain.errors import CredentialError, MailError, NotFoundError
+from imap_mcp.domain.errors import (
+    CredentialError,
+    MailError,
+    NotFoundError,
+    UnexpectedResponseError,
+)
 from imap_mcp.domain.model import SyncReport, SyncState
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection, Sequence
-    from datetime import timedelta
+    from datetime import datetime, timedelta
 
     from imap_mcp.domain.model import (
         FetchedHeader,
@@ -205,13 +210,16 @@ class SyncService:
                 self._sync_folders(source, run, only_folder)
         except (MailError, CredentialError) as exc:
             log.error("sync_failed", error=str(exc))
-            if only_folder is not None:
-                return SyncReport(kind=SyncStateKind.FAILED, error=str(exc))
-            self._index.save_sync_state(
-                replace(previous, last_attempt=started, kind=SyncStateKind.FAILED,
-                        error=str(exc))
-            )  # fmt: skip
-            return SyncReport(kind=SyncStateKind.FAILED, error=str(exc))
+            return self._failed(previous, started, only_folder, str(exc))
+        except NotFoundError:
+            raise
+        except Exception as exc:
+            # A bug, or a message that no parser expects. Record the failure
+            # so that tool calls within the interval read the index instead
+            # of syncing again into the same error.
+            log.error("sync_failed", error_type=type(exc).__name__)
+            error = f"Sync failed with an unexpected {type(exc).__name__}"
+            return self._failed(previous, started, only_folder, error)
 
         complete = not run.interrupted
         kind = SyncStateKind.COMPLETE if complete else SyncStateKind.PARTIAL
@@ -246,6 +254,20 @@ class SyncService:
             remaining=remaining,
             folders=tuple(run.folders),
         )
+
+    def _failed(
+        self,
+        previous: SyncState,
+        started: datetime,
+        only_folder: str | None,
+        error: str,
+    ) -> SyncReport:
+        if only_folder is None:
+            self._index.save_sync_state(
+                replace(previous, last_attempt=started, kind=SyncStateKind.FAILED,
+                        error=error)
+            )  # fmt: skip
+        return SyncReport(kind=SyncStateKind.FAILED, error=error)
 
     def _sync_folders(
         self, source: MailSource, run: _Run, only_folder: str | None
@@ -360,7 +382,7 @@ class SyncService:
     def _sync_batch(
         self, source: MailSource, name: str, uids: Sequence[int], run: _Run
     ) -> None:
-        headers = source.fetch_headers(uids)
+        headers = self._fetch_headers(source, name, uids)
         identities = {h.uid: header_identity(h) for h in headers}
         known = self._index.known_identities(set(identities.values()))
 
@@ -378,6 +400,26 @@ class SyncService:
         if skipped:
             run.interrupted = True
             run.remaining += skipped
+
+    def _fetch_headers(
+        self, source: MailSource, name: str, uids: Sequence[int]
+    ) -> list[FetchedHeader]:
+        """Fetch headers, and skip any message the client cannot parse.
+
+        One hostile message must not stop the sync of every message around it.
+        If a batch fails to parse, fetch its messages one at a time. A skipped
+        message stays out of the index, so each sync tries it again.
+        """
+        try:
+            return list(source.fetch_headers(uids))
+        except UnexpectedResponseError:
+            if len(uids) == 1:
+                log.warning("message_skipped", folder=name, uid=uids[0])
+                return []
+        headers: list[FetchedHeader] = []
+        for uid in uids:
+            headers.extend(self._fetch_headers(source, name, [uid]))
+        return headers
 
     def _fetch_and_parse(
         self, source: MailSource, headers: Sequence[FetchedHeader], deadline: float

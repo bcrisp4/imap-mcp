@@ -137,12 +137,16 @@ class TestIncrementalSync:
         self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
         index: SqliteIndex, arrival: str,
     ) -> None:  # fmt: skip
-        headers = {"message_id": "<invoice@bank.example>", "subject": "Invoice"}
+        message_id = "<invoice@bank.example>"
         genuine = make_message(
-            **headers, attachments=[("invoice.pdf", "application/pdf", b"GENUINE")]
+            message_id=message_id,
+            subject="Invoice",
+            attachments=[("invoice.pdf", "application/pdf", b"GENUINE")],
         )
         forged = make_message(
-            **headers, attachments=[("invoice.pdf", "application/pdf", b"FORGED" * 10)]
+            message_id=message_id,
+            subject="Invoice",
+            attachments=[("invoice.pdf", "application/pdf", b"FORGED" * 10)],
         )
         sync = make_sync()
         imap_server.add_message("Archive", genuine)
@@ -298,6 +302,34 @@ class TestBudgetAndFreshness:
         assert first.error is not None
         assert "LOGIN" in first.error
         assert imap_server.command_verbs().count("LOGIN") == logins
+
+
+class TestHostileStructure:
+    def test_a_message_too_deep_to_parse_does_not_block_other_mail(
+        self, imap_server: FakeImapServer, make_sync: Callable[..., SyncService],
+        index: SqliteIndex, clock: FakeClock,
+    ) -> None:  # fmt: skip
+        imap_server.add_message("INBOX", make_message(subject="Older"))
+        imap_server.add_message(
+            "INBOX", make_message(subject="Deep"), body_structure=nested_structure(600)
+        )
+        imap_server.add_message("INBOX", make_message(subject="Newer"))
+        sync = make_sync()
+
+        sync.ensure_fresh()
+        start = len(imap_server.commands)
+        clock.advance(60)
+        sync.ensure_fresh()
+
+        assert subjects(index) == ["Newer", "Older"]
+        assert len(imap_server.commands) == start
+
+
+def nested_structure(depth: int) -> str:
+    structure = '("TEXT" "PLAIN" ("CHARSET" "us-ascii") NIL NIL "7BIT" 2 1)'
+    for _ in range(depth):
+        structure = f'({structure} "MIXED" ("BOUNDARY" "b"))'
+    return structure
 
 
 class TestFlagFallbacks:

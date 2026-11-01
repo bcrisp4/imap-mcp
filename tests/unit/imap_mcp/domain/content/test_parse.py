@@ -94,6 +94,18 @@ class TestHeaders:
 
 
 class TestBody:
+    def test_a_whole_message_nested_too_deep_is_marked_failed(self) -> None:
+        depth = 1000
+        layers = b"".join(
+            b"Content-Type: multipart/mixed; boundary=b%d\r\n\r\n--b%d\r\n" % (n, n)
+            for n in range(depth)
+        )
+        raw = b"From: a@example.com\r\nMIME-Version: 1.0\r\n" + layers + b"hi"
+
+        parsed = parse_message(fetched(raw), None, whole=raw)
+
+        assert parsed.parse_state is ParseState.FAILED
+
     def test_base64_text_cut_at_the_cap_still_decodes(self) -> None:
         part = TextPart(
             part="1", subtype="plain", charset="utf-8", encoding="base64", size=0

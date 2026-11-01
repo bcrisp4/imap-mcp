@@ -27,7 +27,12 @@ from imap_mcp.adapters.imap.guard import GuardHandle, install_guard
 from imap_mcp.adapters.imap.structure import parse_structure
 from imap_mcp.adapters.imap.uidset import render_uid_sets
 from imap_mcp.domain.enums import FolderRole
-from imap_mcp.domain.errors import ConfigError, GuardViolation, MailError
+from imap_mcp.domain.errors import (
+    ConfigError,
+    GuardViolation,
+    MailError,
+    UnexpectedResponseError,
+)
 from imap_mcp.domain.folders import folder_role
 from imap_mcp.domain.model import FetchedHeader, Folder, FolderStatus
 
@@ -64,9 +69,11 @@ def _mail_errors(operation: str) -> Generator[None]:
         raise
     except _TRANSPORT_ERRORS as exc:
         raise MailError(f"IMAP {operation} failed: {exc}") from exc
-    except (KeyError, TypeError, ValueError, IndexError) as exc:
-        # A server that leaves out an item the client asked for.
-        raise MailError(f"IMAP {operation} returned an unexpected response") from exc
+    except (KeyError, TypeError, ValueError, IndexError, RecursionError) as exc:
+        # A server that leaves out an item the client asked for, or a
+        # structure nested too deep for the recursive response parser.
+        msg = f"IMAP {operation} returned an unexpected response"
+        raise UnexpectedResponseError(msg) from exc
 
 
 def _find_section(item: dict[Any, Any], prefix: str) -> bytes | None:
