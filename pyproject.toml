@@ -1,6 +1,6 @@
 [project]
 name = "imap-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "Local, read-only MCP server with keyword search over one IMAP mailbox"
 readme = "README.md"
 license = "MIT"
